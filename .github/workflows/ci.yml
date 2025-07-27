@@ -36,7 +36,7 @@ jobs:
           pip install -r api/requirements.txt ruff black pytest httpx
 
       - name: Lint (ruff)
-        run: ruff .
+        run: ruff check .
 
       - name: Check formatting (black)
         run: black --check .
