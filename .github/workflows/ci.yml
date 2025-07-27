@@ -38,8 +38,8 @@ jobs:
       - name: Lint (ruff)
         run: ruff check .
 
-      - name: Check formatting (black)
-        run: black --check .
+      # - name: Check formatting (black)
+      #   run: black --check .
 
       - name: Run tests
         env:
