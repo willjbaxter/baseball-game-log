@@ -1,4 +1,4 @@
-version: '3.8'
+# Compose v2+ no longer requires an explicit version key
 
 services:
   db:
