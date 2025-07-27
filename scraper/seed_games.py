@@ -18,8 +18,9 @@ from api.models import Base, Game
 
 # Database connection
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/game_log")
-# Convert asyncpg URL to psycopg2 for sync operations
-if "+asyncpg" in DATABASE_URL:
+
+# Ensure we use a synchronous driver for the seed script
+if "asyncpg" in DATABASE_URL:
     DATABASE_URL = DATABASE_URL.replace("+asyncpg", "+psycopg2")
 
 engine = create_engine(DATABASE_URL)
