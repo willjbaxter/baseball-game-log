@@ -9,10 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies first for layer caching
-COPY requirements.txt ./
+COPY api/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
+# Copy entire repo (includes api source and alembic files)
 COPY . .
 
 # Expose port

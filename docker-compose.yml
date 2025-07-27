@@ -14,15 +14,15 @@ services:
 
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/game_log
     depends_on:
       - db
     ports:
       - "8000:8000"
-    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 volumes:
   pgdata:

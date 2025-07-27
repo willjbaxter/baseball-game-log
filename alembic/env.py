@@ -4,10 +4,26 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 from alembic import context
+import os
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Override the DB URL from environment if provided
+_db_url = os.getenv("DATABASE_URL")
+if _db_url:
+    config.set_main_option("sqlalchemy.url", _db_url)
+# Default to local Postgres if nothing else specified
+elif config.get_main_option("sqlalchemy.url") == "driver://user:pass@localhost/dbname":
+    config.set_main_option(
+        "sqlalchemy.url", "postgresql+psycopg2://postgres:postgres@db:5432/game_log"
+    )
+
+# If the supplied DATABASE_URL uses asyncpg, swap driver for psycopg2 for migrations
+if "+asyncpg" in config.get_main_option("sqlalchemy.url"):
+    sync_url = config.get_main_option("sqlalchemy.url").replace("+asyncpg", "+psycopg2")
+    config.set_main_option("sqlalchemy.url", sync_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
