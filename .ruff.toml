@@ -1,0 +1,6 @@
+[tool.ruff]
+exclude = [
+    "alembic/versions/*",
+    ".venv/*",
+]
+line-length = 100 
