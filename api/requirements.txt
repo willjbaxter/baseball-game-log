@@ -6,3 +6,7 @@ alembic
 psycopg2-binary
 python-dotenv
 MLB-StatsAPI
+fuzzywuzzy
+python-Levenshtein
+httpx
+pybaseball
