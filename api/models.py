@@ -63,6 +63,7 @@ class StatcastEvent(Base):
     description = Column(Text, nullable=True)
     wpa = Column(Float, nullable=True)  # Win Probability Added relative to Red Sox
     clip_uuid = Column(String(40), nullable=True)
+    video_url = Column(Text, nullable=True)  # Direct URL to MP4
 
     def __repr__(self):
         return f"<StatcastEvent game_pk={self.mlb_game_pk} ev={self.launch_speed}>" 

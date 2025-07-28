@@ -5,7 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from .models import Game
 from api.models import StatcastEvent
-import re, httpx
+
+import httpx
 from sqlalchemy import func
 
 name_cache: dict[int,str] = {}
@@ -54,7 +55,12 @@ async def list_games():
     """List all attended games."""
     db = SessionLocal()
     try:
-        games = db.query(Game).filter(Game.attended == True).order_by(Game.date.desc()).all()
+        games = (
+            db.query(Game)
+            .filter(Game.attended.is_(True))
+            .order_by(Game.date.desc())
+            .all()
+        )
         return {
             "games": [
                 {

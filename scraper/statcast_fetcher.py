@@ -1,21 +1,11 @@
 #!/usr/bin/env python3
 """Fetch Statcast events for attended games and store in DB."""
+
+import math
 import os
 import sys
-from datetime import date
-from typing import List
-import math
 import time
-from httpx import HTTPStatusError
-
-
-def safe_int(val):
-    try:
-        if val is None or (isinstance(val, float) and math.isnan(val)):
-            return None
-        return int(round(float(val)))
-    except (ValueError, TypeError):
-        return None
+from typing import List
 
 import pandas as pd
 from sqlalchemy import create_engine
@@ -34,8 +24,31 @@ import httpx
 _gf_cache: dict[int, dict[str, str]] = {}
 
 
+def safe_int(val):
+    try:
+        if val is None or (isinstance(val, float) and math.isnan(val)):
+            return None
+        return int(round(float(val)))
+    except (ValueError, TypeError):
+        return None
+
+
 def get_gf_lookup(pk: int) -> dict[str, str]:
-    """Return {sv_id: play_id} mapping for a game_pk using Baseball Savant gf feed."""
+    """Return {sv_id: play_id} mapping for a game_pk using Baseball Savant gf feed.
+
+    Savant's JSON schema has changed over the years.  As of 2024+ the payload looks like::
+
+        {
+          "team_home": [...],
+          "team_away": [...],
+          ...
+        }
+
+    Each element in those arrays contains ``play_id`` (always) and ``sv_id`` (often for recent
+    seasons).  Earlier seasons expose *only* ``play_id``.  We only populate the mapping when an
+    ``sv_id`` is present – callers fall back to StatsAPI ``playId`` when Savant cannot map.
+    """
+
     if pk in _gf_cache:
         return _gf_cache[pk]
 
@@ -46,22 +59,56 @@ def get_gf_lookup(pk: int) -> dict[str, str]:
             resp = httpx.get(url, timeout=15)
             resp.raise_for_status()
             data = resp.json()
+
             lookup: dict[str, str] = {}
-            # gf feed JSON: {'home': [...], 'away': [...]} each item has 'sv_id' and 'play_id'
-            for side in ("home", "away"):
-                for play in data.get(side, []):
-                    sv = play.get("sv_id")
-                    pid = play.get("play_id")
-                    if sv and pid:
-                        lookup[str(sv)] = str(pid)
+
+            # Iterate through all lists in the JSON to find play data
+            for key in data:
+                if isinstance(data[key], list):
+                    for play in data[key]:
+                        if isinstance(play, dict):
+                            pid = play.get("play_id") or play.get("playId")
+                            sv = play.get("sv_id") or play.get("svId")
+                            if sv and pid:
+                                lookup[str(sv)] = str(pid)
+
             _gf_cache[pk] = lookup
             return lookup
-        except (httpx.RequestError, httpx.HTTPStatusError):
+        except (httpx.RequestError, httpx.HTTPStatusError) as e: # More specific exception handling
+            print(f"DEBUG: HTTP error for pk {pk}: {e}") # Debug logging
             tries += 1
             time.sleep(2 * tries)
-    # give up
+        except Exception as e:
+            print(f"DEBUG: Unexpected error for pk {pk}: {e}") # Debug logging
+            # permanent failure – memoise empty so we don't re-hit inside same run
+            _gf_cache[pk] = {}
+            return {}
+
+    # permanent failure – memoise empty so we don't re-hit inside same run
     _gf_cache[pk] = {}
     return {}
+
+
+def get_clip_from_statsapi(game_pk: int, play_id: str) -> str | None:
+    """Return the MP4 URL for a given playId from the StatsAPI content endpoint."""
+    url = f"https://statsapi.mlb.com/api/v1/game/{game_pk}/content"
+    try:
+        r = httpx.get(url, timeout=10)
+        r.raise_for_status()
+        # Note: 'highlights' -> 'highlights' is correct, not a typo.
+        for item in r.json().get("highlights", {}).get("highlights", {}).get("items", []):
+            if item.get("playId") == play_id:
+                # Find the highest-resolution MP4 available.
+                mp4_urls = [
+                    p["url"]
+                    for p in item.get("playbacks", [])
+                    if p.get("url", "").endswith(".mp4")
+                ]
+                if mp4_urls:
+                    return max(mp4_urls)
+    except Exception:
+        pass  # Silently fail, as this is a fallback.
+    return None
 
 
 def fetch_playbyplay_json(pk: int):
@@ -150,35 +197,58 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
     if df is None or df.empty:
         return []
 
+    print(f"DEBUG: pybaseball dataframe for game {g.mlb_game_pk}:")
+    print(df.head().to_string())
+    print(df.columns)
+
     events: list[StatcastEvent] = []
     for _, row in df.iterrows():
-        # pybaseball uses numeric pitcher id – coerce to str for consistency
-        # WPA: delta_home_win_exp is change in home team's win expectancy.
-        # --- WPA ---
+        # Handle pybaseball column name changes
+        ls = row.get("launch_speed") or row.get("launch_speed_value")
+        la = row.get("launch_angle") or row.get("launch_angle_value")
+
+        if pd.isna(ls):
+            continue
+
         d_home = row.get("delta_home_win_exp")
         wpa_val = None
-        if d_home is not None and d_home == d_home:  # not NaN
-            bos_is_home = g.home_team_id == 111  # 111 = Red Sox
+        if d_home is not None and pd.notna(d_home):
+            bos_is_home = g.home_team_id == 111
             wpa_val = round(float(d_home) if bos_is_home else -float(d_home), 6)
 
-        clip_uuid = row.get("play_id") or row.get("play_guid")
-        if not clip_uuid and row.get("sv_id"):
+        clip_uuid = None
+        video_url = None
+
+        play_id = row.get("play_id") or row.get("play_guid")
+        sv_id = row.get("sv_id")
+        at_bat_number = row.get("at_bat_number")
+
+        if play_id and pd.notna(play_id):
+            clip_uuid = play_id
+        elif sv_id and pd.notna(sv_id):
             lookup = get_gf_lookup(g.mlb_game_pk)
-            clip_uuid = lookup.get(str(row.get("sv_id")))
+            clip_uuid = lookup.get(str(sv_id))
+        
+        if not clip_uuid and at_bat_number and pd.notna(at_bat_number):
+            video_url = get_clip_from_statsapi(g.mlb_game_pk, str(int(at_bat_number)))
+
+        if clip_uuid:
+            video_url = f"https://fastball-clips.mlb.com/{g.mlb_game_pk}/home/{clip_uuid}.mp4"
 
         events.append(
             StatcastEvent(
                 mlb_game_pk=g.mlb_game_pk,
-                event_datetime=str(row.get("game_date")),
-                batter_name=str(row.get("player_name") or ""),
-                pitcher_name=str(row.get("pitcher") or ""),
-                pitch_type=row.get("pitch_type"),
-                launch_speed=safe_int(row.get("launch_speed")),
-                launch_angle=safe_int(row.get("launch_angle")),
+                event_datetime=str(row.get("game_date", "")),
+                batter_name=str(row.get("player_name", "")),
+                pitcher_name=str(row.get("pitcher", "")),
+                pitch_type=str(row.get("pitch_type", "")),
+                launch_speed=safe_int(ls),
+                launch_angle=safe_int(la),
                 estimated_ba=safe_int(row.get("estimated_ba_using_speedangle")),
-                description=row.get("description"),
+                description=str(row.get("description", "")),
                 wpa=wpa_val,
                 clip_uuid=clip_uuid,
+                video_url=video_url,
             )
         )
 
@@ -186,34 +256,57 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
 
 
 def run():
+    parser = argparse.ArgumentParser(description="Fetch Statcast data for attended games.")
+    parser.add_argument("--game", type=int, help="Fetch data for a single gamePk.")
+    parser.add_argument("--force", action="store_true", help="Force re-fetch of data even if it exists.")
+    args = parser.parse_args()
+
     db = SessionLocal()
     try:
-        # Only pull Statcast for games the user actually attended.
-        games = (
-            db.query(Game)
-            .filter(Game.attended.is_(True), Game.mlb_game_pk.isnot(None))
-            .all()
-        )
+        games_query = db.query(Game).filter(Game.attended.is_(True), Game.mlb_game_pk.isnot(None))
+        if args.game:
+            games_query = games_query.filter(Game.mlb_game_pk == args.game)
+        
+        games_to_process = games_query.order_by(Game.date).all()
+        
         total_inserted = 0
-        for g in games:
-            events = fetch_statcast_for_game(g)
-            if not events:
-                continue
-            with db.no_autoflush:
-                for ev in events:
-                    exists = db.query(StatcastEvent).filter(
-                        StatcastEvent.mlb_game_pk == ev.mlb_game_pk,
-                        StatcastEvent.event_datetime == ev.event_datetime,
-                        StatcastEvent.batter_name == ev.batter_name,
-                    ).first()
-                    if not exists:
-                        db.add(ev)
-                        total_inserted += 1
-            db.commit()
-            print(f"{g.date} {g.away_team}@{g.home_team} → inserted {len(events)} events")
-        print(f"✅ Done. Inserted {total_inserted} statcast events.")
+        failed_games = []
+
+        for g in games_to_process:
+            if not args.force:
+                exists = db.query(StatcastEvent).filter(StatcastEvent.mlb_game_pk == g.mlb_game_pk).first()
+                if exists:
+                    print(f"Game {g.mlb_game_pk} already has data. Skipping. Use --force to re-process.")
+                    continue
+            
+            if args.force:
+                deleted_count = db.query(StatcastEvent).filter(StatcastEvent.mlb_game_pk == g.mlb_game_pk).delete()
+                if deleted_count > 0:
+                    print(f"Game {g.mlb_game_pk}: --force provided, deleted {deleted_count} old events.")
+                db.commit()
+
+            try:
+                events = fetch_statcast_for_game(g)
+                if not events:
+                    print(f"{g.date} {g.away_team}@{g.home_team} → No events found.")
+                    continue
+
+                db.add_all(events)
+                db.commit()
+                total_inserted += len(events)
+                print(f"{g.date} {g.away_team}@{g.home_team} → inserted {len(events)} events")
+
+            except Exception as e:
+                print(f"❌ Game {g.mlb_game_pk} ({g.date}) failed: {e}")
+                failed_games.append(g.mlb_game_pk)
+                db.rollback()
+
     finally:
         db.close()
+
+    print(f"✅ Done. Inserted {total_inserted} total statcast events.")
+    if failed_games:
+        print(f"⚠ Failed games: {failed_games}")
 
 
 if __name__ == "__main__":

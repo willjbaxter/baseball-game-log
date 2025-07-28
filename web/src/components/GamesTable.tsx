@@ -9,6 +9,7 @@ interface Game {
   home_score: number | null;
   away_score: number | null;
   venue_name: string | null;
+  recap_video_url?: string;
 }
 
 export default function GamesTable({ games }: { games: Game[] }) {
@@ -71,7 +72,18 @@ export default function GamesTable({ games }: { games: Game[] }) {
               <td className="p-2 border text-right">
                 {g.away_score !== null && g.home_score !== null ? `${g.away_score}-${g.home_score}` : "TBD"}
               </td>
-              <td className="p-2 border">{g.venue_name ?? ""}</td>
+              <td className="p-2 border">
+                {g.recap_video_url && (
+                  <a
+                    href={g.recap_video_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-indigo-400 underline"
+                  >
+                    Watch Recap
+                  </a>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>

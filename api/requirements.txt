@@ -10,3 +10,4 @@ fuzzywuzzy
 python-Levenshtein
 httpx
 pybaseball
+python-mlb-statsapi
