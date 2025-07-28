@@ -36,4 +36,16 @@ def test_statcast_only_attended(db_session):
         .limit(1)
         .all()
     )
-    assert not rows, "Statcast contains events from unattended games" 
+    assert not rows, "Statcast contains events from unattended games"
+
+
+def test_all_statcast_have_clip(db_session):
+    from api.models import StatcastEvent
+
+    missing = (
+        db_session.query(StatcastEvent)
+        .join(Game, StatcastEvent.mlb_game_pk == Game.mlb_game_pk)
+        .filter(Game.attended.is_(True), StatcastEvent.clip_uuid.is_(None))
+        .count()
+    )
+    assert missing == 0, f"{missing} attended Statcast rows missing clip_uuid" 

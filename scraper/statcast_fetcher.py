@@ -5,6 +5,8 @@ import sys
 from datetime import date
 from typing import List
 import math
+import time
+from httpx import HTTPStatusError
 
 
 def safe_int(val):
@@ -27,6 +29,39 @@ from api.models import Game, StatcastEvent
 # pybaseball single game endpoint is more reliable than daily range
 from pybaseball import statcast_single_game as sc_game
 import httpx
+
+# Cache Savant game-feed per game_pk to avoid refetching
+_gf_cache: dict[int, dict[str, str]] = {}
+
+
+def get_gf_lookup(pk: int) -> dict[str, str]:
+    """Return {sv_id: play_id} mapping for a game_pk using Baseball Savant gf feed."""
+    if pk in _gf_cache:
+        return _gf_cache[pk]
+
+    url = f"https://baseballsavant.mlb.com/gf?game_pk={pk}"
+    tries = 0
+    while tries < 3:
+        try:
+            resp = httpx.get(url, timeout=15)
+            resp.raise_for_status()
+            data = resp.json()
+            lookup: dict[str, str] = {}
+            # gf feed JSON: {'home': [...], 'away': [...]} each item has 'sv_id' and 'play_id'
+            for side in ("home", "away"):
+                for play in data.get(side, []):
+                    sv = play.get("sv_id")
+                    pid = play.get("play_id")
+                    if sv and pid:
+                        lookup[str(sv)] = str(pid)
+            _gf_cache[pk] = lookup
+            return lookup
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            tries += 1
+            time.sleep(2 * tries)
+    # give up
+    _gf_cache[pk] = {}
+    return {}
 
 
 def fetch_playbyplay_json(pk: int):
@@ -71,6 +106,18 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
             if not hd or hd.get("launchSpeed") is None:
                 continue  # skip non-batted-ball events
 
+            # try to pull sv_id for mapping if no playId
+            clip_uuid = play.get("playId")
+            if not clip_uuid:
+                # sv_id lives on the first pitch event if available
+                try:
+                    sv_candidate = play["playEvents"][0].get("svId")
+                except (IndexError, KeyError, TypeError):
+                    sv_candidate = None
+                if sv_candidate:
+                    lookup = get_gf_lookup(g.mlb_game_pk)
+                    clip_uuid = lookup.get(str(sv_candidate))
+
             events.append(
                 StatcastEvent(
                     mlb_game_pk=g.mlb_game_pk,
@@ -86,7 +133,7 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                     if hd.get("estimatedBA")
                     else None,
                     description=play.get("result", {}).get("event"),
-                    clip_uuid=play.get("playId"),
+                    clip_uuid=clip_uuid,
                 )
             )
 
@@ -115,6 +162,9 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
             wpa_val = round(float(d_home) if bos_is_home else -float(d_home), 6)
 
         clip_uuid = row.get("play_id") or row.get("play_guid")
+        if not clip_uuid and row.get("sv_id"):
+            lookup = get_gf_lookup(g.mlb_game_pk)
+            clip_uuid = lookup.get(str(row.get("sv_id")))
 
         events.append(
             StatcastEvent(
