@@ -1,0 +1,50 @@
+name: Nightly Statcast Dump
+
+on:
+  schedule:
+    # every day at 04:33 UTC
+    - cron: "33 4 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest-and-export:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r api/requirements.txt
+
+      - name: Run Statcast ingest
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
+        run: python scraper/statcast_fetcher.py
+
+      - name: Export JSON artefacts for website
+        env:
+          DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
+        run: |
+          python scripts/export_json.py artefacts
+
+      - name: Push artefacts to website repo (data/game-log branch)
+        uses: ad-m/github-push-action@v0.8.0
+        with:
+          github_token: ${{ secrets.PAT_PUSH_TO_WEBSITE }}
+          repository: willjbaxter/willbaxter.info
+          branch: data/game-log
+          force: true
+          directory: artefacts 
