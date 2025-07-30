@@ -7,7 +7,6 @@ from .models import Game
 from api.models import StatcastEvent
 
 import httpx
-import math
 from sqlalchemy import func
 
 name_cache: dict[int,str] = {}

@@ -6,7 +6,6 @@ Usage:
 
 The script expects DATABASE_URL env var pointing to the same DB used by the ingester.
 """
-import json
 import os
 import sys
 from pathlib import Path

@@ -276,7 +276,6 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if d_home is not None and pd.notna(d_home):
             # Identify which team the batter was on
             batter_team = str(row.get("bat_team", "")).upper()
-            home_team = str(row.get("home_team", "")).upper() 
             away_team = str(row.get("away_team", "")).upper()
             
             # Convert home-centric WPA to player-centric WPA
