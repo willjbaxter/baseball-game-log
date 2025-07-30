@@ -1,0 +1,31 @@
+baseURL: "https://baseball.willbaxter.info"
+languageCode: "en-us"
+title: "Personal Baseball Game Log"
+theme: "minimal"
+
+params:
+  author: "Will Baxter"
+  description: "Personal analytics from games I've attended"
+
+menu:
+  main:
+    - name: "Games"
+      url: "/"
+      weight: 1
+    - name: "Longest HRs"
+      url: "/longest-hrs/"
+      weight: 2
+    - name: "Barrel Map"
+      url: "/barrel-map/"
+      weight: 3
+    - name: "WPA Leaders"
+      url: "/wpa-leaders/"
+      weight: 4
+    - name: "Highlights"
+      url: "/highlights/"
+      weight: 5
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true

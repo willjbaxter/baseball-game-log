@@ -1,0 +1,255 @@
+"use client";
+import React, { useState, useEffect } from "react";
+
+interface BattedBall {
+  exit_velocity: number;
+  launch_angle: number;
+  batter: string;
+  outcome: string;
+  is_barrel: boolean;
+  date: string;
+  matchup: string;
+  description: string;
+}
+
+interface BarrelMapProps {
+  data: BattedBall[];
+}
+
+export default function BarrelMap({ data }: BarrelMapProps) {
+  const [hoveredPoint, setHoveredPoint] = useState<BattedBall | null>(null);
+  const [filterOutcome, setFilterOutcome] = useState<string>("all");
+
+  // Filter data based on outcome
+  const filteredData = data.filter(ball => 
+    filterOutcome === "all" || ball.outcome === filterOutcome
+  );
+
+  // Chart dimensions - make it bigger and better proportioned
+  const width = 900;
+  const height = 600;
+  const margin = { top: 30, right: 30, bottom: 80, left: 80 };
+  const chartWidth = width - margin.left - margin.right;
+  const chartHeight = height - margin.top - margin.bottom;
+
+  // Scales - fix axis ranges for better baseball context
+  const maxEV = 120;  // Fixed max for consistent scaling
+  const minEV = 60;   // Fixed min for consistent scaling
+  const maxLA = 50;   // Fixed max for launch angle
+  const minLA = -20;  // Fixed min for launch angle
+
+  const xScale = (ev: number) => ((ev - minEV) / (maxEV - minEV)) * chartWidth;
+  const yScale = (la: number) => chartHeight - ((la - minLA) / (maxLA - minLA)) * chartHeight;
+
+  // Color mapping
+  const getColor = (outcome: string) => {
+    switch (outcome) {
+      case "home_run": return "#ff6b6b"; // Red for home runs
+      case "hit": return "#4ecdc4"; // Teal for hits
+      case "out": return "#95a5a6"; // Gray for outs
+      default: return "#3498db"; // Blue default
+    }
+  };
+
+  // Outcome counts
+  const outcomes = data.reduce((acc, ball) => {
+    acc[ball.outcome] = (acc[ball.outcome] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  const barrels = data.filter(ball => ball.is_barrel).length;
+
+  // X-axis ticks
+  const xTicks = [60, 70, 80, 90, 100, 110, 120];
+  const yTicks = [-20, -10, 0, 10, 20, 30, 40, 50];
+
+  return (
+    <div className="bg-gray-800 rounded-lg p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-xl font-bold text-white">Exit Velocity × Launch Angle</h3>
+        <div className="flex items-center gap-4">
+          <select
+            value={filterOutcome}
+            onChange={(e) => setFilterOutcome(e.target.value)}
+            className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+          >
+            <option value="all">All Outcomes</option>
+            <option value="home_run">Home Runs ({outcomes.home_run || 0})</option>
+            <option value="hit">Hits ({outcomes.hit || 0})</option>
+            <option value="out">Outs ({outcomes.out || 0})</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="flex gap-8">
+        {/* Chart */}
+        <div className="relative">
+          <svg width={width} height={height} className="bg-gray-900 rounded">
+            {/* Barrel zone (approximate) */}
+            <defs>
+              <pattern id="barrelZone" patternUnits="userSpaceOnUse" width="4" height="4">
+                <rect width="4" height="4" fill="#34495e" opacity="0.3"/>
+                <path d="M 0,4 l 4,-4 M -1,1 l 2,-2 M 3,5 l 2,-2" stroke="#4CAF50" strokeWidth="0.5" opacity="0.5"/>
+              </pattern>
+            </defs>
+            
+            {/* Barrel zone background */}
+            <rect
+              x={margin.left + xScale(98)}
+              y={margin.top + yScale(50)}
+              width={xScale(120) - xScale(98)}
+              height={yScale(8) - yScale(50)}
+              fill="url(#barrelZone)"
+              opacity="0.3"
+            />
+
+            {/* X-axis */}
+            <line
+              x1={margin.left}
+              y1={margin.top + chartHeight}
+              x2={margin.left + chartWidth}
+              y2={margin.top + chartHeight}
+              stroke="#6b7280"
+              strokeWidth="2"
+            />
+            
+            {/* Y-axis */}
+            <line
+              x1={margin.left}
+              y1={margin.top}
+              x2={margin.left}
+              y2={margin.top + chartHeight}
+              stroke="#6b7280"
+              strokeWidth="2"
+            />
+
+            {/* X-axis ticks and labels */}
+            {xTicks.map(tick => (
+              <g key={tick}>
+                <line
+                  x1={margin.left + xScale(tick)}
+                  y1={margin.top + chartHeight}
+                  x2={margin.left + xScale(tick)}
+                  y2={margin.top + chartHeight + 5}
+                  stroke="#6b7280"
+                />
+                <text
+                  x={margin.left + xScale(tick)}
+                  y={margin.top + chartHeight + 20}
+                  textAnchor="middle"
+                  className="fill-gray-400 text-xs"
+                >
+                  {tick}
+                </text>
+              </g>
+            ))}
+
+            {/* Y-axis ticks and labels */}
+            {yTicks.map(tick => (
+              <g key={tick}>
+                <line
+                  x1={margin.left - 5}
+                  y1={margin.top + yScale(tick)}
+                  x2={margin.left}
+                  y2={margin.top + yScale(tick)}
+                  stroke="#6b7280"
+                />
+                <text
+                  x={margin.left - 10}
+                  y={margin.top + yScale(tick) + 3}
+                  textAnchor="end"
+                  className="fill-gray-400 text-xs"
+                >
+                  {tick}
+                </text>
+              </g>
+            ))}
+
+            {/* Axis labels */}
+            <text
+              x={margin.left + chartWidth / 2}
+              y={height - 10}
+              textAnchor="middle"
+              className="fill-gray-300 text-sm font-medium"
+            >
+              Exit Velocity (mph)
+            </text>
+            <text
+              x={15}
+              y={margin.top + chartHeight / 2}
+              textAnchor="middle"
+              className="fill-gray-300 text-sm font-medium"
+              transform={`rotate(-90, 15, ${margin.top + chartHeight / 2})`}
+            >
+              Launch Angle (°)
+            </text>
+
+            {/* Data points */}
+            {filteredData.map((ball, i) => (
+              <circle
+                key={i}
+                cx={margin.left + xScale(ball.exit_velocity)}
+                cy={margin.top + yScale(ball.launch_angle)}
+                r={ball.is_barrel ? 5 : 3}
+                fill={getColor(ball.outcome)}
+                stroke={ball.is_barrel ? "#4CAF50" : "none"}
+                strokeWidth={ball.is_barrel ? 2 : 0}
+                opacity={0.7}
+                className="cursor-pointer hover:opacity-100 transition-opacity"
+                onMouseEnter={() => setHoveredPoint(ball)}
+                onMouseLeave={() => setHoveredPoint(null)}
+              />
+            ))}
+          </svg>
+
+          {/* Tooltip */}
+          {hoveredPoint && (
+            <div className="absolute top-2 left-2 bg-black bg-opacity-90 text-white p-3 rounded text-sm max-w-xs">
+              <div className="font-bold">{hoveredPoint.batter}</div>
+              <div>{hoveredPoint.exit_velocity} mph, {hoveredPoint.launch_angle}°</div>
+              <div className="text-gray-300">{hoveredPoint.description}</div>
+              <div className="text-gray-400 text-xs">{hoveredPoint.date} - {hoveredPoint.matchup}</div>
+              {hoveredPoint.is_barrel && (
+                <div className="text-green-400 text-xs mt-1">🎯 Barrel</div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Legend and stats */}
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-lg font-semibold text-white mb-2">Legend</h4>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                <span className="text-gray-300 text-sm">Home Runs ({outcomes.home_run || 0})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-teal-500"></div>
+                <span className="text-gray-300 text-sm">Hits ({outcomes.hit || 0})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-gray-500"></div>
+                <span className="text-gray-300 text-sm">Outs ({outcomes.out || 0})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-green-500"></div>
+                <span className="text-gray-300 text-sm">Barrels ({barrels})</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-700 rounded p-3">
+            <h4 className="text-white font-semibold mb-2">Stats</h4>
+            <div className="text-sm text-gray-300 space-y-1">
+              <div>Total Batted Balls: {data.length}</div>
+              <div>Barrel Rate: {((barrels / data.length) * 100).toFixed(1)}%</div>
+              <div>Home Run Rate: {(((outcomes.home_run || 0) / data.length) * 100).toFixed(1)}%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

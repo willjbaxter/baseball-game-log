@@ -60,8 +60,10 @@ class StatcastEvent(Base):
     launch_speed = Column(Integer, nullable=True)  # EV mph
     launch_angle = Column(Integer, nullable=True)
     estimated_ba = Column(Integer, nullable=True)  # xBA *1000
-    description = Column(Text, nullable=True)
+    raw_description = Column(Text, nullable=True)  # Raw pybaseball description field
+    event_type = Column(String(30), nullable=True)  # Events field: "home_run", "field_out", etc.
     wpa = Column(Float, nullable=True)  # Win Probability Added relative to Red Sox
+    hit_distance_sc = Column(Integer, nullable=True)  # Statcast distance in feet
     clip_uuid = Column(String(40), nullable=True)
     video_url = Column(Text, nullable=True)  # Direct URL to MP4
 

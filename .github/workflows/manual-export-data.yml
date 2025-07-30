@@ -1,0 +1,66 @@
+name: Manual Baseball Data Export
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_pk:
+        description: "Optional game PK to ingest (leave blank to skip ingestion)"
+        required: false
+        type: string
+
+jobs:
+  export-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout baseball-game-log repo
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        
+    - name: Install Python dependencies
+      run: |
+        pip install -r requirements-dev.txt
+        pip install pandas sqlalchemy psycopg2-binary
+        
+    - name: Start database
+      run: |
+        docker-compose up -d db
+        sleep 10
+        
+    - name: Run database migrations
+      run: |
+        docker-compose exec -T api alembic upgrade head || true
+        
+    - name: Ingest new game data (if game_pk provided)
+      if: ${{ github.event.inputs.game_pk != '' }}
+      run: |
+        docker-compose exec -T api python /app/scraper/statcast_fetcher.py --game ${{ github.event.inputs.game_pk }} --force
+        
+    - name: Export data to JSON
+      run: |
+        docker-compose exec -T api python /app/scripts/export_json.py /app/export/
+        
+    - name: Copy export files to local
+      run: |
+        docker-compose cp api:/app/export/ ./export/
+        
+    - name: Update site data files
+      run: |
+        rm -rf site/data/game-log && mkdir -p site/data/game-log
+        cp export/*.json site/data/game-log/
+        
+    - name: Commit and push updated site
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        git add site/data/game-log
+        git commit -m "Update baseball game log data - $(date '+%Y-%m-%d %H:%M')" || exit 0
+        git push origin main
+        
+    - name: Clean up
+      run: |
+        docker-compose down

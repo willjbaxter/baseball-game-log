@@ -33,6 +33,23 @@ def safe_int(val):
         return None
 
 
+def normalize_player_name(name: str) -> str:
+    """Convert player names to consistent format for matching."""
+    if not name or name == 'nan':
+        return ""
+    
+    name = str(name).strip()
+    
+    # If name is in "Last, First" format, convert to "First Last"
+    if ',' in name:
+        parts = name.split(',', 1)
+        if len(parts) == 2:
+            last, first = parts[0].strip(), parts[1].strip()
+            return f"{first} {last}"
+    
+    return name
+
+
 def get_gf_lookup(pk: int) -> dict[str, str]:
     """Return {sv_id: play_id} mapping for a game_pk using Baseball Savant gf feed.
 
@@ -132,6 +149,8 @@ SessionLocal = sessionmaker(bind=engine)
 
 def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
     """Return StatcastEvent objects for a single gamePk.
+    
+    NEW: Captures ALL plays (not just batted balls) to get complete WPA data.
 
     Strategy:
     1. Prefer the official MLB StatsAPI /feed/live endpoint as it is
@@ -143,51 +162,92 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
     if not g.mlb_game_pk:
         return []
 
-    # -------- 1) StatsAPI live feed ---------
-    data = fetch_playbyplay_json(g.mlb_game_pk)
-    if data and "liveData" in data:
-        plays = data["liveData"]["plays"]["allPlays"]
-        events: list[StatcastEvent] = []
-        for play in plays:
-            hd = play.get("hitData")
-            if not hd or hd.get("launchSpeed") is None:
-                continue  # skip non-batted-ball events
+    # -------- 1) Use pybaseball as primary source (per user guidance) ---------
+    try:
+        df: pd.DataFrame | None = sc_game(g.mlb_game_pk)
+        if df is not None and not df.empty:
+            print(f"✅ pybaseball: Found {len(df)} Statcast events for game {g.mlb_game_pk}")
+            
+            events: list[StatcastEvent] = []
+            for _, row in df.iterrows():
+                # Normalize the player name for consistent matching
+                batter_raw = str(row.get("player_name", ""))
+                batter = normalize_player_name(batter_raw)
+                
+                # Skip if no batter name
+                if not batter or batter == 'nan':
+                    continue
+                    
+                # Get WPA data - properly handle home/away team perspective
+                d_home = row.get("delta_home_win_exp")
+                wpa_val = None
+                if d_home is not None and pd.notna(d_home):
+                    # Identify which team the batter was on
+                    batter_team = str(row.get("bat_team", "")).upper()
+                    home_team = str(row.get("home_team", "")).upper()
+                    away_team = str(row.get("away_team", "")).upper()
+                    
+                    # Convert home-centric WPA to player-centric WPA
+                    if batter_team == away_team:
+                        # Batter on away team: flip sign (away team gains hurt home team's win prob)
+                        wpa_val = round(-float(d_home), 6)
+                    else:
+                        # Batter on home team: keep sign
+                        wpa_val = round(float(d_home), 6)
+                
+                # Get exit velocity, launch angle, and distance
+                launch_speed = row.get("launch_speed")
+                launch_angle = row.get("launch_angle")
+                hit_distance = row.get("hit_distance_sc")
+                
+                ev_val = None
+                la_val = None
+                distance_val = None
+                if launch_speed is not None and pd.notna(launch_speed):
+                    ev_val = round(float(launch_speed))
+                if launch_angle is not None and pd.notna(launch_angle):
+                    la_val = round(float(launch_angle))
+                if hit_distance is not None and pd.notna(hit_distance):
+                    distance_val = round(float(hit_distance))
 
-            # try to pull sv_id for mapping if no playId
-            clip_uuid = play.get("playId")
-            if not clip_uuid:
-                # sv_id lives on the first pitch event if available
-                try:
-                    sv_candidate = play["playEvents"][0].get("svId")
-                except (IndexError, KeyError, TypeError):
-                    sv_candidate = None
-                if sv_candidate:
+                # Get clip UUID for video
+                clip_uuid = None
+                play_id = row.get("play_id") or row.get("play_guid")
+                sv_id = row.get("sv_id")
+                
+                if play_id and pd.notna(play_id):
+                    clip_uuid = play_id
+                elif sv_id and pd.notna(sv_id):
                     lookup = get_gf_lookup(g.mlb_game_pk)
-                    clip_uuid = lookup.get(str(sv_candidate))
+                    clip_uuid = lookup.get(str(sv_id))
 
-            events.append(
-                StatcastEvent(
-                    mlb_game_pk=g.mlb_game_pk,
-                    event_datetime=str(
-                        play.get("playEndTime") or play.get("playStartTime") or ""
-                    ),
-                    batter_name=str(play["matchup"]["batter"].get("fullName") or ""),
-                    pitcher_name=str(play["matchup"]["pitcher"].get("fullName") or ""),
-                    pitch_type=play.get("details", {}).get("type", {}).get("code"),
-                    launch_speed=safe_int(hd.get("launchSpeed")),
-                    launch_angle=safe_int(hd.get("launchAngle")),
-                    estimated_ba=safe_int(hd.get("estimatedBA") * 1000)
-                    if hd.get("estimatedBA")
-                    else None,
-                    description=play.get("result", {}).get("event"),
-                    clip_uuid=clip_uuid,
+                events.append(
+                    StatcastEvent(
+                        mlb_game_pk=g.mlb_game_pk,
+                        event_datetime=str(row.get("game_date", "")),
+                        batter_name=batter,
+                        pitcher_name=str(row.get("pitcher", "")),
+                        pitch_type=str(row.get("pitch_type", "")),
+                        launch_speed=ev_val,
+                        launch_angle=la_val,
+                        estimated_ba=safe_int(row.get("estimated_ba_using_speedangle")),
+                        raw_description=str(row.get("description", "")),
+                        event_type=str(row.get("events", "")),
+                        wpa=wpa_val,
+                        hit_distance_sc=distance_val,
+                        clip_uuid=clip_uuid,
+                    )
                 )
-            )
+            
+            if events:
+                print(f"✅ Created {len(events)} events from pybaseball data")
+                return events
+            
+    except Exception as e:
+        print(f"⚠️ pybaseball fetch failed: {e}")
+        # Fall back to StatsAPI method
 
-        if events:
-            return events
-
-    # -------- 2) pybaseball fallback ---------
+    # -------- 2) pybaseball fallback (if StatsAPI completely fails) ---------
     try:
         df: pd.DataFrame | None = sc_game(g.mlb_game_pk)
     except Exception as e:
@@ -210,11 +270,22 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if pd.isna(ls):
             continue
 
+        # Get WPA data - properly handle home/away team perspective
         d_home = row.get("delta_home_win_exp")
         wpa_val = None
         if d_home is not None and pd.notna(d_home):
-            bos_is_home = g.home_team_id == 111
-            wpa_val = round(float(d_home) if bos_is_home else -float(d_home), 6)
+            # Identify which team the batter was on
+            batter_team = str(row.get("bat_team", "")).upper()
+            home_team = str(row.get("home_team", "")).upper() 
+            away_team = str(row.get("away_team", "")).upper()
+            
+            # Convert home-centric WPA to player-centric WPA
+            if batter_team == away_team:
+                # Batter on away team: flip sign
+                wpa_val = round(-float(d_home), 6)
+            else:
+                # Batter on home team: keep sign
+                wpa_val = round(float(d_home), 6)
 
         clip_uuid = None
         video_url = None
@@ -235,6 +306,12 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if clip_uuid:
             video_url = f"https://fastball-clips.mlb.com/{g.mlb_game_pk}/home/{clip_uuid}.mp4"
 
+        # Get distance from hit_distance_sc
+        distance_val = None
+        hit_distance = row.get("hit_distance_sc")
+        if hit_distance is not None and pd.notna(hit_distance):
+            distance_val = safe_int(hit_distance)
+
         events.append(
             StatcastEvent(
                 mlb_game_pk=g.mlb_game_pk,
@@ -245,8 +322,10 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 launch_speed=safe_int(ls),
                 launch_angle=safe_int(la),
                 estimated_ba=safe_int(row.get("estimated_ba_using_speedangle")),
-                description=str(row.get("description", "")),
+                raw_description=str(row.get("description", "")),
+                event_type=str(row.get("events", "")),
                 wpa=wpa_val,
+                hit_distance_sc=distance_val,
                 clip_uuid=clip_uuid,
                 video_url=video_url,
             )
@@ -256,6 +335,7 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
 
 
 def run():
+    import argparse
     parser = argparse.ArgumentParser(description="Fetch Statcast data for attended games.")
     parser.add_argument("--game", type=int, help="Fetch data for a single gamePk.")
     parser.add_argument("--force", action="store_true", help="Force re-fetch of data even if it exists.")
