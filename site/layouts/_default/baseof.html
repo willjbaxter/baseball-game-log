@@ -10,7 +10,7 @@
 <body>
     <header>
         <div class="container">
-            <h1>⚾ {{ .Site.Title }}</h1>
+            <h1>{{ .Site.Title }}</h1>
             <nav>
                 {{ range .Site.Menus.main }}
                 <a href="{{ .URL }}" {{ if eq .URL $.RelPermalink }}class="active"{{ end }}>{{ .Name }}</a>

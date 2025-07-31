@@ -6,20 +6,58 @@ title: "Barrel Map"
 
 Exit velocity vs launch angle for all batted balls from attended games.
 
+<div class="filter-bar">
+    <label>
+        <select id="yearFilter">
+            <option value="">All Years</option>
+        </select>
+    </label>
+</div>
+
 <div class="chart-container">
     <div id="barrelChart" style="width: 100%; height: 600px;"></div>
 </div>
 
 <script>
 // Load data from static files
+let allBarrelData = [];
+
 fetch('/barrel_map.json')
 .then(response => response.json())
 .then(barrelData => {
+    allBarrelData = barrelData;
+    
+    // Populate year filter
+    const years = [...new Set(barrelData.map(d => d.date.substring(0, 4)))].sort().reverse();
+    const yearSelect = document.getElementById('yearFilter');
+    years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = option.textContent = year;
+        yearSelect.appendChild(option);
+    });
+    
+    // Initial render with all data
+    renderChart(barrelData);
+})
+.catch(error => {
+    console.error('Error loading barrel map data:', error);
+    document.getElementById('barrelChart').innerHTML = '<p>Error loading data</p>';
+});
 
-// Prepare data for Plotly
-const homeRuns = barrelData.filter(d => d.outcome === 'home_run');
-const hits = barrelData.filter(d => d.outcome === 'hit');
-const outs = barrelData.filter(d => d.outcome === 'out');
+// Filter functionality
+document.getElementById('yearFilter').addEventListener('change', function() {
+    const yearFilter = this.value;
+    const filteredData = yearFilter ? 
+        allBarrelData.filter(d => d.date.substring(0, 4) === yearFilter) : 
+        allBarrelData;
+    renderChart(filteredData);
+});
+
+function renderChart(barrelData) {
+    // Prepare data for Plotly
+    const homeRuns = barrelData.filter(d => d.outcome === 'home_run');
+    const hits = barrelData.filter(d => d.outcome === 'hit');
+    const outs = barrelData.filter(d => d.outcome === 'out');
 
 const traces = [
     {
@@ -33,7 +71,16 @@ const traces = [
             size: 6,
             opacity: 0.6
         },
-        text: outs.map(d => `${d.batter_name}<br>${d.description}<br>${d.matchup}`),
+        text: outs.map(d => {
+            const formattedDate = new Date(d.date).toLocaleDateString('en-US', {
+                month: 'numeric', day: 'numeric', year: 'numeric'
+            });
+            let tooltip = `${d.batter_name}<br>${d.description}`;
+            if (d.pitcher) tooltip += `<br>vs ${d.pitcher}`;
+            if (d.distance) tooltip += `<br>Distance: ${d.distance}ft`;
+            tooltip += `<br>${formattedDate} - ${d.matchup}`;
+            return tooltip;
+        }),
         hovertemplate: '%{text}<br>%{x}mph, %{y}°<extra></extra>'
     },
     {
@@ -47,7 +94,16 @@ const traces = [
             size: 8,
             opacity: 0.8
         },
-        text: hits.map(d => `${d.batter_name}<br>${d.description}<br>${d.matchup}`),
+        text: hits.map(d => {
+            const formattedDate = new Date(d.date).toLocaleDateString('en-US', {
+                month: 'numeric', day: 'numeric', year: 'numeric'
+            });
+            let tooltip = `${d.batter_name}<br>${d.description}`;
+            if (d.pitcher) tooltip += `<br>vs ${d.pitcher}`;
+            if (d.distance) tooltip += `<br>Distance: ${d.distance}ft`;
+            tooltip += `<br>${formattedDate} - ${d.matchup}`;
+            return tooltip;
+        }),
         hovertemplate: '%{text}<br>%{x}mph, %{y}°<extra></extra>'
     },
     {
@@ -61,7 +117,16 @@ const traces = [
             size: 12,
             opacity: 1
         },
-        text: homeRuns.map(d => `${d.batter_name}<br>${d.description}<br>${d.matchup}`),
+        text: homeRuns.map(d => {
+            const formattedDate = new Date(d.date).toLocaleDateString('en-US', {
+                month: 'numeric', day: 'numeric', year: 'numeric'
+            });
+            let tooltip = `${d.batter_name}<br>${d.description}`;
+            if (d.pitcher) tooltip += `<br>vs ${d.pitcher}`;
+            if (d.distance) tooltip += `<br>Distance: ${d.distance}ft`;
+            tooltip += `<br>${formattedDate} - ${d.matchup}`;
+            return tooltip;
+        }),
         hovertemplate: '%{text}<br>%{x}mph, %{y}°<extra></extra>'
     }
 ];
@@ -90,10 +155,6 @@ const config = {
     displayModeBar: false
 };
 
-Plotly.newPlot('barrelChart', traces, layout, config);
-})
-.catch(error => {
-    console.error('Error loading barrel map data:', error);
-    document.getElementById('barrelChart').innerHTML = '<p>Error loading data</p>';
-});
+    Plotly.newPlot('barrelChart', traces, layout, config);
+}
 </script>

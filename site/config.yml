@@ -21,9 +21,6 @@ menu:
     - name: "WPA Leaders"
       url: "/wpa-leaders/"
       weight: 4
-    - name: "Highlights"
-      url: "/highlights/"
-      weight: 5
 
 markup:
   goldmark:

@@ -17,9 +17,8 @@ title: "Attended Games"
     <thead>
         <tr>
             <th>Date ↓</th>
-            <th>Matchup 🔥</th>
-            <th>Score 🔥</th>
-            <th>Venue</th>
+            <th>Matchup</th>
+            <th>Score</th>
         </tr>
     </thead>
     <tbody>
@@ -41,11 +40,16 @@ fetch('/games.json')
         row.dataset.year = game.date.substring(0, 4);
         row.dataset.teams = game.away_team + game.home_team;
         
+        const formattedDate = new Date(game.date).toLocaleDateString('en-US', {
+            month: 'numeric',
+            day: 'numeric', 
+            year: 'numeric'
+        });
+        
         row.innerHTML = `
-            <td>${game.date}</td>
+            <td>${formattedDate}</td>
             <td>${game.away_team} @ ${game.home_team}</td>
             <td>${game.away_score}-${game.home_score}</td>
-            <td>${game.venue_name || 'Unknown'}</td>
         `;
         tbody.appendChild(row);
     });
@@ -61,7 +65,7 @@ fetch('/games.json')
 })
 .catch(error => {
     console.error('Error loading games data:', error);
-    document.querySelector('#gamesTable tbody').innerHTML = '<tr><td colspan="4">Error loading data</td></tr>';
+    document.querySelector('#gamesTable tbody').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
 });
 
 // Filter functionality
