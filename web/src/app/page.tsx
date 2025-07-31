@@ -82,7 +82,16 @@ export default function Home() {
   const handlePlayerClick = async (playerName: string) => {
     setSelectedPlayer(playerName);
     try {
-      const response = await fetch(`http://localhost:8000/statcast/wpa/player/${encodeURIComponent(playerName)}`);
+      const isStatic = process.env.NODE_ENV === 'production';
+      if (isStatic) {
+        // In static mode, we don't have individual player breakdowns
+        // Could pre-generate these or disable the feature
+        setPlayerBreakdown(null);
+        return;
+      }
+      
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/statcast/wpa/player/${encodeURIComponent(playerName)}`);
       const data = await response.json();
       setPlayerBreakdown(data);
     } catch (error) {
@@ -108,24 +117,57 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const yearParam = selectedYear === "all" ? "" : `&year=${selectedYear}`;
-        const barrelYearParam = selectedYear === "all" ? "" : `year=${selectedYear}`;
-        const [gamesRes, homersRes, wpaRes, barrelRes] = await Promise.all([
-          fetch("http://localhost:8000/games"),
-          fetch(`http://localhost:8000/statcast/longest-homers?limit=20${yearParam}`),
-          fetch("http://localhost:8000/statcast/wpa/leaders?limit=15"),
-          fetch(`http://localhost:8000/statcast/barrel-map${barrelYearParam ? `?${barrelYearParam}` : ""}`)
-        ]);
+        const isStatic = process.env.NODE_ENV === 'production';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        
+        if (isStatic) {
+          // Static mode: fetch JSON files directly
+          const [gamesRes, homersRes, wpaRes, barrelRes] = await Promise.all([
+            fetch("/games.json"),
+            fetch("/longest_homers.json"),
+            fetch("/wpa_leaders.json"),
+            fetch("/barrel_map.json")
+          ]);
+          
+          const gamesData = await gamesRes.json();
+          const homersData = await homersRes.json();
+          const wpaData = await wpaRes.json();
+          const barrelData = await barrelRes.json();
+          
+          // Filter data on client side for static build
+          let filteredHomers = homersData;
+          let filteredBarrel = barrelData;
+          
+          if (selectedYear !== "all") {
+            filteredHomers = homersData.filter(h => h.date.startsWith(selectedYear));
+            filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
+          }
+          
+          setGames(gamesData || []);
+          setLongestHomers(filteredHomers || []);
+          setWpaLeaders(wpaData || []);
+          setBarrelMapData(filteredBarrel || []);
+        } else {
+          // Development mode: use API
+          const yearParam = selectedYear === "all" ? "" : `&year=${selectedYear}`;
+          const barrelYearParam = selectedYear === "all" ? "" : `year=${selectedYear}`;
+          const [gamesRes, homersRes, wpaRes, barrelRes] = await Promise.all([
+            fetch(`${apiUrl}/games`),
+            fetch(`${apiUrl}/statcast/longest-homers?limit=20${yearParam}`),
+            fetch(`${apiUrl}/statcast/wpa/leaders?limit=15`),
+            fetch(`${apiUrl}/statcast/barrel-map${barrelYearParam ? `?${barrelYearParam}` : ""}`)
+          ]);
+          
+          const gamesData = await gamesRes.json();
+          const homersData = await homersRes.json();
+          const wpaData = await wpaRes.json();
+          const barrelMapData = await barrelRes.json();
 
-        const gamesData = await gamesRes.json();
-        const homersData = await homersRes.json();
-        const wpaData = await wpaRes.json();
-        const barrelData = await barrelRes.json();
-
-        setGames(gamesData.games || []);
-        setLongestHomers(homersData.homers || []);
-        setWpaLeaders(wpaData.leaders || []);
-        setBarrelMapData(barrelData.batted_balls || []);
+          setGames(gamesData.games || []);
+          setLongestHomers(homersData.homers || []);
+          setWpaLeaders(wpaData.leaders || []);
+          setBarrelMapData(barrelMapData.batted_balls || []);
+        }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
