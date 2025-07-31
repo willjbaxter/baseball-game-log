@@ -1,9 +1,9 @@
 name: Nightly Statcast Dump
 
 on:
-  schedule:
-    # every day at 04:33 UTC
-    - cron: "33 4 * * *"
+  # schedule:
+  #   # every day at 04:33 UTC - DISABLED: manual games only
+  #   - cron: "33 4 * * *"
   workflow_dispatch:
 
 jobs:
