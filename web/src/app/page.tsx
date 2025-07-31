@@ -33,6 +33,31 @@ interface LongestHomer {
   game_pk: number;
 }
 
+interface JsonLongestHomer {
+  distance: number;
+  launch_speed: number;
+  launch_angle: number;
+  batter_name: string;
+  pitcher_name: string;
+  date: string;
+  game_pk: number;
+  home_team: string;
+  away_team: string;
+}
+
+interface JsonBattedBall {
+  launch_speed: number;
+  launch_angle: number;
+  batter_name: string;
+  pitcher?: string;
+  outcome: string;
+  date: string;
+  away_team: string;
+  home_team: string;
+  description: string;
+  distance?: number;
+}
+
 interface WpaLeader {
   player: string;
   wpa: number;
@@ -130,9 +155,9 @@ export default function Home() {
           ]);
           
           const gamesData = await gamesRes.json();
-          const homersData = await homersRes.json();
+          const homersData: JsonLongestHomer[] = await homersRes.json();
           const wpaData = await wpaRes.json();
-          const barrelData = await barrelRes.json();
+          const barrelData: JsonBattedBall[] = await barrelRes.json();
           
           // Filter data on client side for static build
           let filteredHomers = homersData;
@@ -143,10 +168,34 @@ export default function Home() {
             filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
           }
           
+          // Transform JSON data to match component interfaces
+          const transformedHomers: LongestHomer[] = filteredHomers.map(h => ({
+            distance: h.distance,
+            launch_speed: h.launch_speed,
+            launch_angle: h.launch_angle,
+            batter: h.batter_name,
+            pitcher: h.pitcher_name,
+            date: h.date,
+            game_pk: h.game_pk
+          }));
+          
+          const transformedBarrel: BattedBall[] = filteredBarrel.map(b => ({
+            exit_velocity: b.launch_speed,
+            launch_angle: b.launch_angle,
+            batter: b.batter_name,
+            pitcher: b.pitcher || "",
+            outcome: b.outcome,
+            is_barrel: (8 <= b.launch_angle <= 50) && (b.launch_speed >= 98),
+            date: b.date,
+            matchup: `${b.away_team} @ ${b.home_team}`,
+            description: b.description,
+            distance: b.distance
+          }));
+          
           setGames(gamesData || []);
-          setLongestHomers(filteredHomers || []);
+          setLongestHomers(transformedHomers);
           setWpaLeaders(wpaData || []);
-          setBarrelMapData(filteredBarrel || []);
+          setBarrelMapData(transformedBarrel);
         } else {
           // Development mode: use API
           const yearParam = selectedYear === "all" ? "" : `&year=${selectedYear}`;
