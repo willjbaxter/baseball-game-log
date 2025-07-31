@@ -5,7 +5,6 @@ import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import pandas as pd
 from pybaseball import statcast_single_game
 
 def investigate_fields():
@@ -40,7 +39,7 @@ def investigate_fields():
         key_fields = ['player_name', 'events', 'description', 'launch_speed', 'launch_angle'] + distance_cols + wpa_cols
         available_fields = [f for f in key_fields if f in df.columns]
         
-        print(f"\n📋 Sample data for key fields:")
+        print("\n📋 Sample data for key fields:")
         sample_df = df[available_fields].dropna(subset=['launch_speed']).head(5)
         print(sample_df.to_string())
         

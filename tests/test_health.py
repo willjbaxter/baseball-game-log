@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-from datetime import date
 from unittest.mock import Mock
 
 from api.main import app

@@ -62,7 +62,7 @@ def main():
                     
                 print(f"    Deleted {len(events_to_delete)} duplicate events, kept 1")
         
-        print(f"\n🧹 Cleanup summary:")
+        print("\n🧹 Cleanup summary:")
         print(f"  - Found {len(corrupted_groups)} corrupted groups")
         print(f"  - Total corrupted events: {total_corrupted_events}")
         print(f"  - Events deleted: {total_corrupted_events - len(corrupted_groups)}")

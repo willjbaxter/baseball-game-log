@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os, pytest
+import os
+import pytest
 
 @pytest.fixture(scope="session")
 def db_session():
