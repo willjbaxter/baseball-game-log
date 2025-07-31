@@ -6,10 +6,8 @@ Finds the correct MLB game ID for a given date and teams.
 
 import argparse
 import sys
-from datetime import date
 from typing import Optional
 
-import httpx
 
 def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dict]:
     """
@@ -41,7 +39,6 @@ def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dic
         else:
             search_ranges = [range(565000, 566000)]  # 2019 range
         
-        found_games = []
         
         print(f"🔎 Scanning game ID ranges for {year}...")
         
@@ -83,7 +80,7 @@ def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dic
                                 print(f"   Statcast events: {len(df)}")
                                 
                                 if result["teams_swapped"]:
-                                    print(f"⚠️  WARNING: Teams are swapped from your input!")
+                                    print("⚠️  WARNING: Teams are swapped from your input!")
                                     print(f"   You said: {away_team} @ {home_team}")
                                     print(f"   Actual:   {result['actual_away']} @ {result['actual_home']}")
                                 
@@ -131,7 +128,7 @@ def main():
             if actual_away == expected_away and actual_home == expected_home:
                 print(f"✅ Score matches expected: {expected_away}-{expected_home}")
             else:
-                print(f"⚠️  Score mismatch!")
+                print("⚠️  Score mismatch!")
                 print(f"   Expected: {expected_away}-{expected_home}")
                 print(f"   Actual:   {actual_away}-{actual_home}")
         

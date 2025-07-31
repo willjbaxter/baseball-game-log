@@ -4,7 +4,6 @@
 import os
 import sys
 import json
-from datetime import date
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
