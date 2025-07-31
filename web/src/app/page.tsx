@@ -394,12 +394,12 @@ export default function Home() {
                   <div className="bg-gray-800 rounded-lg p-6">
                     <h3 className="text-lg font-medium mb-4">WPA Explained</h3>
                     <p className="text-gray-300 mb-3">
-                      Win Probability Added measures how much a player's actions change their team's chance of winning.
+                      Win Probability Added measures how much a player&apos;s actions change their team&apos;s chance of winning.
                     </p>
                     <ul className="text-sm text-gray-400 space-y-1">
                       <li>• Positive WPA = clutch performance</li>
-                      <li>• Negative WPA = hurt team's chances</li>
-                      <li>• Based on game situation & outcome</li>
+                      <li>• Negative WPA = hurt team&apos;s chances</li>
+                      <li>• Based on game situation &amp; outcome</li>
                       <li>• Higher leverage = bigger impact</li>
                     </ul>
                   </div>

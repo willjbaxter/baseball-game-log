@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);

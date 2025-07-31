@@ -1,6 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import WpaSparkline from "./WpaSparkline";
+import React from "react";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
