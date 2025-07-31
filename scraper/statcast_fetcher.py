@@ -366,7 +366,7 @@ def run():
             try:
                 events = fetch_statcast_for_game(g)
                 if not events:
-                    print(f"{g.date} {g.away_team}@{g.home_team} → No events found.")
+                    print(f"⚠️  {g.date} {g.away_team}@{g.home_team} (pk={g.mlb_game_pk}) → Statcast not available; skipping")
                     continue
 
                 db.add_all(events)

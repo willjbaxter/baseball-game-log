@@ -102,7 +102,9 @@ def enrich_games() -> None:
     try:
         games: list[Game] = (
             db.query(Game)
-            .filter(Game.mlb_game_pk.is_(None))
+            .filter(
+                (Game.home_score.is_(None)) | (Game.mlb_game_pk.is_(None))
+            )
             .all()
         )
 
