@@ -28,39 +28,39 @@ jobs:
         
     - name: Start database
       run: |
-        docker-compose up -d db
+        docker compose up -d db
         sleep 10
         
     - name: Run database migrations
       run: |
-        docker-compose exec -T api alembic upgrade head || true
+        docker compose exec -T api alembic upgrade head || true
         
     - name: Ingest new game data (if game_pk provided)
       if: ${{ github.event.inputs.game_pk != '' }}
       run: |
-        docker-compose exec -T api python /app/scraper/statcast_fetcher.py --game ${{ github.event.inputs.game_pk }} --force
+        docker compose exec -T api python /app/scraper/statcast_fetcher.py --game ${{ github.event.inputs.game_pk }} --force
         
     - name: Export data to JSON
       run: |
-        docker-compose exec -T api python /app/scripts/export_json.py /app/export/
+        docker compose exec -T api python /app/scripts/export_json.py /app/export/
         
     - name: Copy export files to local
       run: |
-        docker-compose cp api:/app/export/ ./export/
+        docker compose cp api:/app/export/ ./export/
         
     - name: Update site data files
       run: |
-        rm -rf site/data/game-log && mkdir -p site/data/game-log
-        cp export/*.json site/data/game-log/
+        rm -rf site/static/*.json
+        cp export/*.json site/static/
         
     - name: Commit and push updated site
       run: |
         git config user.name "GitHub Actions"
         git config user.email "actions@github.com"
-        git add site/data/game-log
+        git add site/static/
         git commit -m "Update baseball game log data - $(date '+%Y-%m-%d %H:%M')" || exit 0
         git push origin main
         
     - name: Clean up
       run: |
-        docker-compose down
+        docker compose down
