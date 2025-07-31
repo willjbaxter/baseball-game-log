@@ -10,10 +10,11 @@ Exit velocity vs launch angle for all batted balls from attended games.
     <div id="barrelChart" style="width: 100%; height: 600px;"></div>
 </div>
 
-{{ $barrel_data := getJSON "data/game-log/barrel_map.json" }}
-
 <script>
-const barrelData = {{ $barrel_data | jsonify }};
+// Load data from static files
+fetch('/barrel_map.json')
+.then(response => response.json())
+.then(barrelData => {
 
 // Prepare data for Plotly
 const homeRuns = barrelData.filter(d => d.outcome === 'home_run');
@@ -90,4 +91,9 @@ const config = {
 };
 
 Plotly.newPlot('barrelChart', traces, layout, config);
+})
+.catch(error => {
+    console.error('Error loading barrel map data:', error);
+    document.getElementById('barrelChart').innerHTML = '<p>Error loading data</p>';
+});
 </script>

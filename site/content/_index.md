@@ -2,9 +2,7 @@
 title: "Attended Games"
 ---
 
-# Attended Games ({{ len (getJSON "data/game-log/games.json") }})
-
-{{ $games := getJSON "data/game-log/games.json" }}
+# Attended Games
 
 <div class="filter-bar">
     <label>
@@ -25,30 +23,50 @@ title: "Attended Games"
         </tr>
     </thead>
     <tbody>
-        {{ range $games }}
-        <tr data-year="{{ substr .date 0 4 }}" data-teams="{{ .away_team }}{{ .home_team }}">
-            <td>{{ dateFormat "2006-01-02" .date }}</td>
-            <td>{{ .away_team }} @ {{ .home_team }}</td>
-            <td>{{ .away_score }}-{{ .home_score }}</td>
-            <td>{{ .venue_name | default "Unknown" }}</td>
-        </tr>
-        {{ end }}
     </tbody>
 </table>
 
 <script>
-// Simple filtering functionality
+// Load games data and populate table
+fetch('/games.json')
+.then(response => response.json())
+.then(games => {
+    // Update title with count
+    document.querySelector('h1').textContent = `Attended Games (${games.length})`;
+    
+    // Populate table
+    const tbody = document.querySelector('#gamesTable tbody');
+    games.forEach(game => {
+        const row = document.createElement('tr');
+        row.dataset.year = game.date.substring(0, 4);
+        row.dataset.teams = game.away_team + game.home_team;
+        
+        row.innerHTML = `
+            <td>${game.date}</td>
+            <td>${game.away_team} @ ${game.home_team}</td>
+            <td>${game.away_score}-${game.home_score}</td>
+            <td>${game.venue_name || 'Unknown'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Populate year filter
+    const years = [...new Set(games.map(game => game.date.substring(0, 4)))].sort().reverse();
+    const yearSelect = document.getElementById('yearFilter');
+    years.forEach(year => {
+        const option = document.createElement('option');
+        option.value = option.textContent = year;
+        yearSelect.appendChild(option);
+    });
+})
+.catch(error => {
+    console.error('Error loading games data:', error);
+    document.querySelector('#gamesTable tbody').innerHTML = '<tr><td colspan="4">Error loading data</td></tr>';
+});
+
+// Filter functionality
 document.getElementById('yearFilter').addEventListener('change', filterTable);
 document.getElementById('teamFilter').addEventListener('input', filterTable);
-
-// Populate year filter
-const years = [...new Set(Array.from(document.querySelectorAll('[data-year]')).map(row => row.dataset.year))].sort().reverse();
-const yearSelect = document.getElementById('yearFilter');
-years.forEach(year => {
-    const option = document.createElement('option');
-    option.value = option.textContent = year;
-    yearSelect.appendChild(option);
-});
 
 function filterTable() {
     const yearFilter = document.getElementById('yearFilter').value;

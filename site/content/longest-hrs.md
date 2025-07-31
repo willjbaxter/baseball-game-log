@@ -4,8 +4,6 @@ title: "Longest Home Runs"
 
 # Longest Home Runs
 
-{{ $homers := getJSON "data/game-log/longest_homers.json" }}
-
 <table class="homers-table">
     <thead>
         <tr>
@@ -18,15 +16,29 @@ title: "Longest Home Runs"
         </tr>
     </thead>
     <tbody>
-        {{ range $homers }}
-        <tr>
-            <td class="highlight">{{ .distance }}ft</td>
-            <td>{{ .launch_speed }}mph</td>
-            <td>{{ .launch_angle }}°</td>
-            <td class="home-run">{{ .batter_name }}</td>
-            <td>{{ dateFormat "2006-01-02" .date }}</td>
-            <td>{{ .away_team }} @ {{ .home_team }}</td>
-        </tr>
-        {{ end }}
     </tbody>
 </table>
+
+<script>
+fetch('/longest_homers.json')
+.then(response => response.json())
+.then(homers => {
+    const tbody = document.querySelector('.homers-table tbody');
+    homers.forEach(homer => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="highlight">${homer.distance}ft</td>
+            <td>${homer.launch_speed}mph</td>
+            <td>${homer.launch_angle}°</td>
+            <td class="home-run">${homer.batter_name}</td>
+            <td>${homer.date}</td>
+            <td>${homer.away_team} @ ${homer.home_team}</td>
+        `;
+        tbody.appendChild(row);
+    });
+})
+.catch(error => {
+    console.error('Error loading longest homers data:', error);
+    document.querySelector('.homers-table tbody').innerHTML = '<tr><td colspan="6">Error loading data</td></tr>';
+});
+</script>

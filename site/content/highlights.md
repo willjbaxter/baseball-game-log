@@ -6,33 +6,60 @@ title: "Highlights"
 
 Coming soon: Video highlights and memorable moments from games I've attended.
 
-{{ $games := getJSON "data/game-log/games.json" }}
-{{ $homers := getJSON "data/game-log/longest_homers.json" }}
-
 <div class="stats-grid">
     <div class="stat-card">
         <h3>Games Attended</h3>
-        <p style="font-size: 2em; font-weight: bold;">{{ len $games }}</p>
+        <p style="font-size: 2em; font-weight: bold;" id="gamesCount">-</p>
     </div>
     
     <div class="stat-card">
         <h3>Home Runs Witnessed</h3>
-        <p style="font-size: 2em; font-weight: bold;">{{ len $homers }}</p>
+        <p style="font-size: 2em; font-weight: bold;" id="homersCount">-</p>
     </div>
     
     <div class="stat-card">
         <h3>Longest HR</h3>
-        {{ with index $homers 0 }}
-        <p style="font-size: 2em; font-weight: bold;">{{ .distance }}ft</p>
-        <p>{{ .batter_name }} - {{ dateFormat "2006-01-02" .date }}</p>
-        {{ end }}
+        <p style="font-size: 2em; font-weight: bold;" id="longestDistance">-</p>
+        <p id="longestDetails">-</p>
     </div>
     
     <div class="stat-card">
         <h3>Most Recent Game</h3>
-        {{ with index $games 0 }}
-        <p style="font-size: 1.5em; font-weight: bold;">{{ .away_team }} @ {{ .home_team }}</p>
-        <p>{{ dateFormat "2006-01-02" .date }} - {{ .away_score }}-{{ .home_score }}</p>
-        {{ end }}
+        <p style="font-size: 1.5em; font-weight: bold;" id="recentMatchup">-</p>
+        <p id="recentDetails">-</p>
     </div>
 </div>
+
+<script>
+Promise.all([
+    fetch('/games.json').then(r => r.json()),
+    fetch('/longest_homers.json').then(r => r.json())
+])
+.then(([games, homers]) => {
+    // Games attended
+    document.getElementById('gamesCount').textContent = games.length;
+    
+    // Home runs witnessed
+    document.getElementById('homersCount').textContent = homers.length;
+    
+    // Longest HR
+    if (homers.length > 0) {
+        const longest = homers[0];
+        document.getElementById('longestDistance').textContent = `${longest.distance}ft`;
+        document.getElementById('longestDetails').textContent = `${longest.batter_name} - ${longest.date}`;
+    }
+    
+    // Most recent game
+    if (games.length > 0) {
+        const recent = games[0];
+        document.getElementById('recentMatchup').textContent = `${recent.away_team} @ ${recent.home_team}`;
+        document.getElementById('recentDetails').textContent = `${recent.date} - ${recent.away_score}-${recent.home_score}`;
+    }
+})
+.catch(error => {
+    console.error('Error loading highlights data:', error);
+    document.querySelectorAll('.stat-card p').forEach(p => {
+        if (p.textContent === '-') p.textContent = 'Error';
+    });
+});
+</script>
