@@ -178,21 +178,21 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 if not batter or batter == 'nan':
                     continue
                     
-                # Get WPA data - properly handle home/away team perspective
+                # Get WPA data - calculate from player's team perspective (neutral)
                 d_home = row.get("delta_home_win_exp")
                 wpa_val = None
                 if d_home is not None and pd.notna(d_home):
                     # Identify which team the batter was on
                     batter_team = str(row.get("bat_team", "")).upper()
-                    away_team = str(row.get("away_team", "")).upper()
+                    home_team = str(row.get("home_team", "")).upper()
                     
-                    # Convert home-centric WPA to player-centric WPA
-                    if batter_team == away_team:
-                        # Batter on away team: flip sign (away team gains hurt home team's win prob)
-                        wpa_val = round(-float(d_home), 6)
-                    else:
-                        # Batter on home team: keep sign
+                    # Player-centric WPA: positive when player helps their own team
+                    if batter_team == home_team:
+                        # Player is on home team: positive d_home helps their team
                         wpa_val = round(float(d_home), 6)
+                    else:
+                        # Player is on away team: negative d_home helps their team
+                        wpa_val = round(-float(d_home), 6)
                 
                 # Get exit velocity, launch angle, and distance
                 launch_speed = row.get("launch_speed")
@@ -269,21 +269,21 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if pd.isna(ls):
             continue
 
-        # Get WPA data - properly handle home/away team perspective
+        # Get WPA data - calculate from player's team perspective (neutral)
         d_home = row.get("delta_home_win_exp")
         wpa_val = None
         if d_home is not None and pd.notna(d_home):
             # Identify which team the batter was on
             batter_team = str(row.get("bat_team", "")).upper()
-            away_team = str(row.get("away_team", "")).upper()
+            home_team = str(row.get("home_team", "")).upper()
             
-            # Convert home-centric WPA to player-centric WPA
-            if batter_team == away_team:
-                # Batter on away team: flip sign
-                wpa_val = round(-float(d_home), 6)
-            else:
-                # Batter on home team: keep sign
+            # Player-centric WPA: positive when player helps their own team
+            if batter_team == home_team:
+                # Player is on home team: positive d_home helps their team
                 wpa_val = round(float(d_home), 6)
+            else:
+                # Player is on away team: negative d_home helps their team
+                wpa_val = round(-float(d_home), 6)
 
         clip_uuid = None
         video_url = None

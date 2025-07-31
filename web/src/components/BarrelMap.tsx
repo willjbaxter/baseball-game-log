@@ -1,15 +1,26 @@
 "use client";
 import React, { useState, useEffect } from "react";
 
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 interface BattedBall {
   exit_velocity: number;
   launch_angle: number;
   batter: string;
+  pitcher: string;
   outcome: string;
   is_barrel: boolean;
   date: string;
   matchup: string;
   description: string;
+  distance: number | null;
 }
 
 interface BarrelMapProps {
@@ -202,16 +213,41 @@ export default function BarrelMap({ data }: BarrelMapProps) {
             ))}
           </svg>
 
-          {/* Tooltip */}
+          {/* Enhanced Tooltip */}
           {hoveredPoint && (
-            <div className="absolute top-2 left-2 bg-black bg-opacity-90 text-white p-3 rounded text-sm max-w-xs">
-              <div className="font-bold">{hoveredPoint.batter}</div>
-              <div>{hoveredPoint.exit_velocity} mph, {hoveredPoint.launch_angle}°</div>
-              <div className="text-gray-300">{hoveredPoint.description}</div>
-              <div className="text-gray-400 text-xs">{hoveredPoint.date} - {hoveredPoint.matchup}</div>
-              {hoveredPoint.is_barrel && (
-                <div className="text-green-400 text-xs mt-1">🎯 Barrel</div>
-              )}
+            <div className="absolute top-4 left-4 bg-gray-900 bg-opacity-95 text-white p-4 rounded-lg shadow-xl text-sm max-w-sm border border-gray-600">
+              <div className="font-bold text-lg text-blue-400 mb-2">{hoveredPoint.batter}</div>
+              <div className="space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Exit Velocity:</span>
+                  <span className="font-semibold text-white">{hoveredPoint.exit_velocity} mph</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-300">Launch Angle:</span>
+                  <span className="font-semibold text-white">{hoveredPoint.launch_angle}°</span>
+                </div>
+                {hoveredPoint.distance && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Distance:</span>
+                    <span className="font-semibold text-orange-400">{hoveredPoint.distance} ft</span>
+                  </div>
+                )}
+                {hoveredPoint.pitcher && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-300">Pitcher:</span>
+                    <span className="font-semibold text-white">{hoveredPoint.pitcher}</span>
+                  </div>
+                )}
+                <div className="pt-2 border-t border-gray-700 mt-2">
+                  <div className="text-gray-300">{hoveredPoint.description}</div>
+                  <div className="text-gray-400 text-xs mt-1">{formatDate(hoveredPoint.date)} - {hoveredPoint.matchup}</div>
+                </div>
+                {hoveredPoint.is_barrel && (
+                  <div className="text-green-400 font-semibold mt-2 flex items-center">
+                    <span className="mr-1">🎯</span> Barrel
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

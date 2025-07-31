@@ -87,21 +87,25 @@ async def list_games():
 
 
 @app.get("/statcast/longest-homers")
-async def longest_homers(limit: int = 100):
+async def longest_homers(limit: int = 100, year: int = None):
     """Return longest home runs (distance desc) across attended games."""
     db = SessionLocal()
     try:
         # Get home runs with actual Statcast distance data
-        rows = (
+        query = (
             db.query(StatcastEvent, Game)
             .join(Game, StatcastEvent.mlb_game_pk == Game.mlb_game_pk)
             .filter(Game.attended.is_(True))
             .filter(StatcastEvent.hit_distance_sc.isnot(None))
             .filter(StatcastEvent.event_type == 'home_run')
-            .order_by(StatcastEvent.hit_distance_sc.desc())
-            .limit(limit)
-            .all()
         )
+        
+        # Add year filter if specified
+        if year is not None:
+            from sqlalchemy import extract
+            query = query.filter(extract('year', Game.date) == year)
+        
+        rows = query.order_by(StatcastEvent.hit_distance_sc.desc()).limit(limit).all()
         result = []
         for ev, g in rows:
             # Normalize names
@@ -222,17 +226,19 @@ async def player_wpa_breakdown(player_name: str):
 
 
 @app.get("/statcast/barrel-map")
-async def barrel_map_data():
+async def barrel_map_data(year: int = None):
     """Return exit velocity vs launch angle data for barrel map visualization."""
     db = SessionLocal()
     try:
-        rows = (
+        query = (
             db.query(
                 StatcastEvent.launch_speed,
                 StatcastEvent.launch_angle,
                 StatcastEvent.batter_name,
+                StatcastEvent.pitcher_name,
                 StatcastEvent.event_type,
                 StatcastEvent.raw_description,
+                StatcastEvent.hit_distance_sc,
                 Game.date,
                 Game.home_team,
                 Game.away_team
@@ -243,8 +249,14 @@ async def barrel_map_data():
                 StatcastEvent.launch_speed.isnot(None),
                 StatcastEvent.launch_angle.isnot(None)
             )
-            .all()
         )
+        
+        # Add year filter if specified
+        if year is not None:
+            from sqlalchemy import extract
+            query = query.filter(extract('year', Game.date) == year)
+        
+        rows = query.all()
         
         # Categorize outcomes for color coding
         batted_balls = []
@@ -269,15 +281,22 @@ async def barrel_map_data():
                 # Barrel definition: roughly 8-50 degree launch angle, 98+ mph exit velo
                 is_barrel = (8 <= la <= 50) and (ev >= 98)
             
+            # Format pitcher name (convert ID to name if needed)
+            pitcher = row.pitcher_name or ""
+            if pitcher.isdigit():
+                pitcher = lookup_player(int(pitcher))
+            
             batted_balls.append({
                 "exit_velocity": ev,
                 "launch_angle": la,
                 "batter": row.batter_name,
+                "pitcher": pitcher,
                 "outcome": outcome,
                 "is_barrel": is_barrel,
                 "date": str(row.date),
                 "matchup": f"{row.away_team} @ {row.home_team}",
-                "description": row.event_type or row.raw_description
+                "description": row.event_type or row.raw_description,
+                "distance": row.hit_distance_sc
             })
         
         return {

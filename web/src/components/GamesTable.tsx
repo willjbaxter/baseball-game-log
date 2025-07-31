@@ -2,6 +2,15 @@
 import React, { useEffect, useState } from "react";
 import WpaSparkline from "./WpaSparkline";
 
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 interface GameRow {
   game_pk: number;
   date: string;
@@ -34,8 +43,8 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
   };
 
   const getSortIcon = (field: SortField) => {
-    if (sortField !== field) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
+    if (sortField !== field) return '⇅';
+    return sortDirection === 'asc' ? '⇈' : '⇊';
   };
 
   const filtered = games.filter((g) => {
@@ -111,7 +120,6 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
             >
               Score {getSortIcon('score')}
             </th>
-            <th className="p-2 border">Venue</th>
           </tr>
         </thead>
         <tbody>
@@ -120,15 +128,12 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
               key={g.game_pk}
               className={`${idx % 2 === 0 ? "bg-gray-800/20" : "bg-gray-800/10"} hover:bg-gray-600/30`}
             >
-              <td className="p-2 border">{g.date}</td>
+              <td className="p-2 border">{formatDate(g.date)}</td>
               <td className="p-2 border">
                 {g.away_team} @ {g.home_team}
               </td>
               <td className="p-2 border text-right">
                 {g.away_score !== null && g.home_score !== null ? `${g.away_score}-${g.home_score}` : "TBD"}
-              </td>
-              <td className="p-2 border text-center">
-                {g.spark && g.spark.length > 0 && <WpaSparkline series={g.spark} />}
               </td>
             </tr>
           ))}

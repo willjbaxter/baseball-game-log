@@ -3,6 +3,15 @@ import { useState, useEffect } from "react";
 import GamesTable from "@/components/GamesTable";
 import BarrelMap from "@/components/BarrelMap";
 
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric'
+  });
+};
+
 interface Game {
   id: number;
   date: string;
@@ -48,11 +57,13 @@ interface BattedBall {
   exit_velocity: number;
   launch_angle: number;
   batter: string;
+  pitcher: string;
   outcome: string;
   is_barrel: boolean;
   date: string;
   matchup: string;
   description: string;
+  distance: number | null;
 }
 
 export default function Home() {
@@ -66,6 +77,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [homersSortField, setHomersSortField] = useState<'distance' | 'launch_speed' | 'launch_angle' | 'date'>('distance');
   const [homersSortDirection, setHomersSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [selectedYear, setSelectedYear] = useState<string>("all");
 
   const handlePlayerClick = async (playerName: string) => {
     setSelectedPlayer(playerName);
@@ -89,18 +101,20 @@ export default function Home() {
   };
 
   const getHomersSortIcon = (field: 'distance' | 'launch_speed' | 'launch_angle' | 'date') => {
-    if (homersSortField !== field) return '↕️';
-    return homersSortDirection === 'asc' ? '↑' : '↓';
+    if (homersSortField !== field) return '⇅';
+    return homersSortDirection === 'asc' ? '⇈' : '⇊';
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const yearParam = selectedYear === "all" ? "" : `&year=${selectedYear}`;
+        const barrelYearParam = selectedYear === "all" ? "" : `year=${selectedYear}`;
         const [gamesRes, homersRes, wpaRes, barrelRes] = await Promise.all([
           fetch("http://localhost:8000/games"),
-          fetch("http://localhost:8000/statcast/longest-homers?limit=20"),
+          fetch(`http://localhost:8000/statcast/longest-homers?limit=20${yearParam}`),
           fetch("http://localhost:8000/statcast/wpa/leaders?limit=15"),
-          fetch("http://localhost:8000/statcast/barrel-map")
+          fetch(`http://localhost:8000/statcast/barrel-map${barrelYearParam ? `?${barrelYearParam}` : ""}`)
         ]);
 
         const gamesData = await gamesRes.json();
@@ -120,14 +134,13 @@ export default function Home() {
     };
 
     fetchData();
-  }, []);
+  }, [selectedYear]);
 
   const tabs = [
     { id: "games", label: "Games" },
     { id: "longest-homers", label: "Longest HRs" },
     { id: "barrel-map", label: "Barrel Map" },
-    { id: "wpa-leaders", label: "WPA Leaders" },
-    { id: "highlights", label: "Highlights" }
+    { id: "wpa-leaders", label: "WPA Leaders" }
   ];
 
   if (loading) {
@@ -142,7 +155,7 @@ export default function Home() {
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto p-6">
         <h1 className="text-4xl font-bold mb-8 text-center">
-          ⚾ Personal Baseball Game Log
+          Personal Baseball Game Log
         </h1>
         
         <div className="flex flex-wrap gap-2 mb-8 border-b border-gray-700">
@@ -181,9 +194,23 @@ export default function Home() {
 
           {activeTab === "longest-homers" && (
             <div>
-              <h2 className="text-2xl font-semibold mb-4">
-                Longest Home Runs
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold">
+                  Longest Home Runs
+                </h2>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-gray-700 text-white px-3 py-2 rounded"
+                >
+                  <option value="all">All Years</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2021">2021</option>
+                  <option value="2019">2019</option>
+                </select>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full border border-gray-700">
                   <thead className="bg-gray-800">
@@ -250,7 +277,7 @@ export default function Home() {
                           <td className="p-3">{homer.launch_angle}°</td>
                           <td className="p-3">{homer.batter}</td>
                           <td className="p-3">{homer.pitcher}</td>
-                          <td className="p-3">{homer.date}</td>
+                          <td className="p-3">{formatDate(homer.date)}</td>
                         </tr>
                       ))}
                   </tbody>
@@ -261,9 +288,23 @@ export default function Home() {
 
           {activeTab === "barrel-map" && (
             <div>
-              <h2 className="text-2xl font-semibold mb-4">
-                Exit Velocity × Launch Angle Map
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold">
+                  Exit Velocity × Launch Angle Map
+                </h2>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-gray-700 text-white px-3 py-2 rounded"
+                >
+                  <option value="all">All Years</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2021">2021</option>
+                  <option value="2019">2019</option>
+                </select>
+              </div>
               <BarrelMap data={barrelMapData} />
             </div>
           )}
@@ -343,7 +384,7 @@ export default function Home() {
                         {playerBreakdown.games.map((game, idx) => (
                           <div key={idx} className="bg-gray-800 rounded-lg p-4">
                             <div className="flex justify-between items-center mb-3">
-                              <span className="font-medium">{game.date} - {game.matchup}</span>
+                              <span className="font-medium">{formatDate(game.date)} - {game.matchup}</span>
                               <span className={`font-bold ${
                                 game.total_wpa > 0 ? "text-green-400" : "text-red-400"
                               }`}>
@@ -378,53 +419,6 @@ export default function Home() {
             </div>
           )}
 
-          {activeTab === "highlights" && (
-            <div>
-              <h2 className="text-2xl font-semibold mb-4">Game Highlights</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-2 text-blue-400">
-                    Longest Home Run
-                  </h3>
-                  {longestHomers[0] && (
-                    <div>
-                      <p className="text-2xl font-bold">{longestHomers[0].distance} ft</p>
-                      <p className="text-sm text-gray-400">
-                        {longestHomers[0].batter} • {longestHomers[0].date}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {longestHomers[0].launch_speed} mph, {longestHomers[0].launch_angle}°
-                      </p>
-                    </div>
-                  )}
-                </div>
-                
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-2 text-green-400">
-                    Top WPA Performance
-                  </h3>
-                  {wpaLeaders[0] && (
-                    <div>
-                      <p className="text-2xl font-bold">+{wpaLeaders[0].wpa}</p>
-                      <p className="text-sm text-gray-400">
-                        {wpaLeaders[0].player.replace(", ", " ").split(" ").reverse().join(" ")}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-gray-800 rounded-lg p-6">
-                  <h3 className="text-lg font-bold mb-2 text-blue-400">
-                    Games Attended
-                  </h3>
-                  <p className="text-2xl font-bold">{games.length}</p>
-                  <p className="text-sm text-gray-400">
-                    Since {games[games.length - 1]?.date.slice(0, 4)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
