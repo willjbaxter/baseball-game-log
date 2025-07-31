@@ -1,7 +1,6 @@
 baseURL: "https://baseball.willbaxter.info"
 languageCode: "en-us"
 title: "Personal Baseball Game Log"
-theme: "minimal"
 
 params:
   author: "Will Baxter"
