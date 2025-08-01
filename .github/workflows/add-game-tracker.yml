@@ -1,0 +1,129 @@
+name: Add Game to Tracker
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_pk:
+        description: "Game PK (if known)"
+        required: false
+        type: string
+      date:
+        description: "Game date YYYY-MM-DD (if PK unknown)"
+        required: false
+        type: string
+      home_team:
+        description: "Home team code (BOS, NYY, etc)"
+        required: false
+        type: string
+      away_team:
+        description: "Away team code (optional)"
+        required: false
+        type: string
+
+jobs:
+  add-game:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements-dev.txt
+
+      - name: Start database
+        run: |
+          docker compose up -d db
+          sleep 10
+
+      - name: Run migrations
+        run: |
+          docker compose run --rm api alembic upgrade head
+
+      - name: Find game PK (if not provided)
+        id: find_pk
+        if: ${{ github.event.inputs.game_pk == '' && github.event.inputs.date != '' }}
+        run: |
+          GAME_PK=$(docker compose run --rm api python /app/scripts/pk_finder.py \
+            --date ${{ github.event.inputs.date }} \
+            --home ${{ github.event.inputs.home_team }} \
+            --away ${{ github.event.inputs.away_team }} | tail -n1)
+          echo "game_pk=$GAME_PK" >> $GITHUB_OUTPUT
+
+      - name: Set final game PK
+        id: final_pk
+        run: |
+          if [ -n "${{ github.event.inputs.game_pk }}" ]; then
+            echo "game_pk=${{ github.event.inputs.game_pk }}" >> $GITHUB_OUTPUT
+          else
+            echo "game_pk=${{ steps.find_pk.outputs.game_pk }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Add game to database
+        if: ${{ steps.final_pk.outputs.game_pk != '' }}
+        run: |
+          docker compose run --rm api python -c "
+          from scraper.seed_games import add_single_game
+          add_single_game({
+              'date': '${{ github.event.inputs.date }}',
+              'home_team': '${{ github.event.inputs.home_team }}',
+              'away_team': '${{ github.event.inputs.away_team }}',
+              'mlb_game_pk': ${{ steps.final_pk.outputs.game_pk }},
+              'attended': True,
+              'source': 'manual'
+          })"
+
+      - name: Fetch statcast data
+        if: ${{ steps.final_pk.outputs.game_pk != '' }}
+        run: |
+          docker compose run --rm api python /app/scraper/statcast_fetcher.py \
+            --game ${{ steps.final_pk.outputs.game_pk }} --force
+
+      - name: Export to both sites
+        run: |
+          # Export to Hugo site
+          docker compose run --rm api python /app/scripts/export_json.py /app/site/static/
+          
+          # Export to Vercel site
+          docker compose run --rm api python /app/scripts/export_json.py /app/web/public/
+
+      - name: Copy exports to host
+        run: |
+          docker compose cp api:/app/site/static/ ./site/
+          docker compose cp api:/app/web/public/ ./web/
+
+      - name: Commit and push
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          
+          # Add both site updates
+          git add site/static/*.json web/public/*.json
+          
+          # Descriptive commit message
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            MSG="Add game: ${{ github.event.inputs.away_team }} @ ${{ github.event.inputs.home_team }} on ${{ github.event.inputs.date }}"
+          else
+            MSG="Add game PK: ${{ steps.final_pk.outputs.game_pk }}"
+          fi
+          
+          git commit -m "$MSG 🤖 Generated with Claude Code" || exit 0
+          git push origin main
+
+      - name: Post results
+        if: ${{ steps.final_pk.outputs.game_pk != '' }}
+        run: |
+          echo "✅ Game successfully added!"
+          echo "Game PK: ${{ steps.final_pk.outputs.game_pk }}"
+          echo "View at: https://baseball.willbaxter.info"
+          echo "Vercel will auto-deploy the updates"
+
+      - name: Clean up
+        if: always()
+        run: |
+          docker compose down
