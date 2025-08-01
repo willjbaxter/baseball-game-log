@@ -77,9 +77,9 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
 
   return (
     <>
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
         <select
-          className="bg-gray-900 border rounded p-2"
+          className="bg-gray-900 border rounded p-2 w-full sm:w-auto"
           value={year}
           onChange={(e) => setYear(e.target.value)}
         >
@@ -102,19 +102,19 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
         <thead className="bg-gray-700 text-gray-200">
           <tr>
             <th 
-              className="p-2 border cursor-pointer hover:bg-gray-600 select-none"
+              className="p-2 md:p-3 border cursor-pointer hover:bg-gray-600 select-none text-xs md:text-sm"
               onClick={() => handleSort('date')}
             >
               Date {getSortIcon('date')}
             </th>
             <th 
-              className="p-2 border cursor-pointer hover:bg-gray-600 select-none"
+              className="p-2 md:p-3 border cursor-pointer hover:bg-gray-600 select-none text-xs md:text-sm"
               onClick={() => handleSort('matchup')}
             >
               Matchup {getSortIcon('matchup')}
             </th>
             <th 
-              className="p-2 border cursor-pointer hover:bg-gray-600 select-none"
+              className="p-2 md:p-3 border cursor-pointer hover:bg-gray-600 select-none text-xs md:text-sm"
               onClick={() => handleSort('score')}
             >
               Score {getSortIcon('score')}
@@ -127,11 +127,11 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
               key={g.game_pk}
               className={`${idx % 2 === 0 ? "bg-gray-800/20" : "bg-gray-800/10"} hover:bg-gray-600/30`}
             >
-              <td className="p-2 border">{formatDate(g.date)}</td>
-              <td className="p-2 border">
+              <td className="p-2 md:p-3 border text-xs md:text-sm">{formatDate(g.date)}</td>
+              <td className="p-2 md:p-3 border text-xs md:text-sm">
                 {g.away_team} @ {g.home_team}
               </td>
-              <td className="p-2 border text-right">
+              <td className="p-2 md:p-3 border text-right text-xs md:text-sm">
                 {g.away_score !== null && g.home_score !== null ? `${g.away_score}-${g.home_score}` : "TBD"}
               </td>
             </tr>

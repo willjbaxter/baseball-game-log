@@ -36,10 +36,15 @@ export default function BarrelMap({ data }: BarrelMapProps) {
     filterOutcome === "all" || ball.outcome === filterOutcome
   );
 
-  // Chart dimensions - make it bigger and better proportioned
+  // Chart dimensions - use CSS classes for responsiveness instead of JS
   const width = 900;
   const height = 600;
-  const margin = { top: 30, right: 30, bottom: 80, left: 80 };
+  const margin = { 
+    top: 30, 
+    right: 30, 
+    bottom: 80, 
+    left: 80 
+  };
   const chartWidth = width - margin.left - margin.right;
   const chartHeight = height - margin.top - margin.bottom;
 
@@ -75,14 +80,14 @@ export default function BarrelMap({ data }: BarrelMapProps) {
   const yTicks = [-20, -10, 0, 10, 20, 30, 40, 50];
 
   return (
-    <div className="bg-gray-800 rounded-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold text-white">Exit Velocity × Launch Angle</h3>
+    <div className="bg-gray-800 rounded-lg p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+        <h3 className="text-lg md:text-xl font-bold text-white">Exit Velocity × Launch Angle</h3>
         <div className="flex items-center gap-4">
           <select
             value={filterOutcome}
             onChange={(e) => setFilterOutcome(e.target.value)}
-            className="bg-gray-700 text-white px-3 py-1 rounded text-sm"
+            className="bg-gray-700 text-white px-3 py-1 rounded text-sm w-full sm:w-auto"
           >
             <option value="all">All Outcomes</option>
             <option value="home_run">Home Runs ({outcomes.home_run || 0})</option>
@@ -92,10 +97,15 @@ export default function BarrelMap({ data }: BarrelMapProps) {
         </div>
       </div>
 
-      <div className="flex gap-8">
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
         {/* Chart */}
-        <div className="relative">
-          <svg width={width} height={height} className="bg-gray-900 rounded">
+        <div className="relative flex-1 overflow-x-auto">
+          <svg 
+            width={width} 
+            height={height} 
+            viewBox={`0 0 ${width} ${height}`}
+            className="bg-gray-900 rounded w-full h-auto max-w-full"
+          >
             {/* Barrel zone (approximate) */}
             <defs>
               <pattern id="barrelZone" patternUnits="userSpaceOnUse" width="4" height="4">
@@ -253,32 +263,32 @@ export default function BarrelMap({ data }: BarrelMapProps) {
         </div>
 
         {/* Legend and stats */}
-        <div className="space-y-4">
+        <div className="lg:min-w-[200px] space-y-4">
           <div>
             <h4 className="text-lg font-semibold text-white mb-2">Legend</h4>
-            <div className="space-y-2">
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-2">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-red-500"></div>
-                <span className="text-gray-300 text-sm">Home Runs ({outcomes.home_run || 0})</span>
+                <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-red-500 flex-shrink-0"></div>
+                <span className="text-gray-300 text-xs md:text-sm">Home Runs ({outcomes.home_run || 0})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-teal-500"></div>
-                <span className="text-gray-300 text-sm">Hits ({outcomes.hit || 0})</span>
+                <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-teal-500 flex-shrink-0"></div>
+                <span className="text-gray-300 text-xs md:text-sm">Hits ({outcomes.hit || 0})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-gray-500"></div>
-                <span className="text-gray-300 text-sm">Outs ({outcomes.out || 0})</span>
+                <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-gray-500 flex-shrink-0"></div>
+                <span className="text-gray-300 text-xs md:text-sm">Outs ({outcomes.out || 0})</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-full bg-blue-500 border-2 border-green-500"></div>
-                <span className="text-gray-300 text-sm">Barrels ({barrels})</span>
+                <div className="w-3 h-3 md:w-4 md:h-4 rounded-full bg-blue-500 border-2 border-green-500 flex-shrink-0"></div>
+                <span className="text-gray-300 text-xs md:text-sm">Barrels ({barrels})</span>
               </div>
             </div>
           </div>
 
           <div className="bg-gray-700 rounded p-3">
             <h4 className="text-white font-semibold mb-2">Stats</h4>
-            <div className="text-sm text-gray-300 space-y-1">
+            <div className="text-xs md:text-sm text-gray-300 space-y-1">
               <div>Total Batted Balls: {data.length}</div>
               <div>Barrel Rate: {((barrels / data.length) * 100).toFixed(1)}%</div>
               <div>Home Run Rate: {(((outcomes.home_run || 0) / data.length) * 100).toFixed(1)}%</div>
