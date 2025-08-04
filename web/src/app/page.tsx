@@ -312,42 +312,33 @@ export default function Home() {
         
         {/* Dashboard Stats */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4">Dashboard</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <StatsCard 
-              title="Lifetime Record" 
+              title="Record" 
               value={`${wins}-${losses}`} 
               subtitle={`${winPct}% win rate`}
-              icon="🏆"
-              color="blue"
             />
             <StatsCard 
               title="Games Attended" 
               value={totalGames} 
               subtitle="Total games"
-              icon="⚾"
-              color="green"
             />
             <StatsCard 
               title="Current Streak" 
               value={`${currentStreak}${streakType}`} 
               subtitle={streakType === 'W' ? 'Wins' : 'Losses'}
-              icon={streakType === 'W' ? '🔥' : '❄️'}
-              color={streakType === 'W' ? 'orange' : 'blue'}
             />
             <StatsCard 
               title="Days Since Last Game" 
               value={daysSinceLastGame} 
               subtitle="Days ago"
-              icon="📅"
-              color="purple"
             />
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-1">
-              <div className="bg-gray-800/50 rounded-lg border border-blue-500/30 p-4">
-                <h3 className="text-sm font-medium text-gray-400 mb-2">Win Rate Trend</h3>
+              <div className="border border-gray-700 rounded p-4 bg-gray-800/20">
+                <h3 className="text-sm font-medium text-gray-300 mb-2">Win Rate Trend</h3>
                 <WinLossSparkline games={games} />
               </div>
             </div>
@@ -355,21 +346,17 @@ export default function Home() {
               title="Average Runs/Game" 
               value={avgRuns} 
               subtitle="Total runs per game"
-              icon="🏃"
-              color="green"
             />
             <div className="space-y-2">
               <StatsCard 
                 title="Highest Scoring Game" 
                 value={bestGame ? `${bestGame.home_score! + bestGame.away_score!} runs` : 'N/A'} 
                 subtitle={bestGame ? formatDate(bestGame.date) : ''}
-                color="green"
               />
               <StatsCard 
                 title="Lowest Scoring Game" 
                 value={worstGame ? `${worstGame.home_score! + worstGame.away_score!} runs` : 'N/A'} 
                 subtitle={worstGame ? formatDate(worstGame.date) : ''}
-                color="red"
               />
             </div>
           </div>
