@@ -2,6 +2,9 @@
 import { useState, useEffect } from "react";
 import GamesTable from "@/components/GamesTable";
 import BarrelMap from "@/components/BarrelMap";
+import LoadingSpinner from "@/components/LoadingSpinner";
+import StatsCard from "@/components/StatsCard";
+import WinLossSparkline from "@/components/WinLossSparkline";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -49,7 +52,7 @@ interface JsonBattedBall {
   launch_speed: number;
   launch_angle: number;
   batter_name: string;
-  pitcher?: string;
+  pitcher_name?: string;
   outcome: string;
   date: string;
   away_team: string;
@@ -139,7 +142,7 @@ export default function Home() {
             exit_velocity: b.launch_speed,
             launch_angle: b.launch_angle,
             batter: b.batter_name,
-            pitcher: b.pitcher || "",
+            pitcher: b.pitcher_name || "",
             outcome: b.outcome,
             is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
             date: b.date,
@@ -186,12 +189,60 @@ export default function Home() {
   ];
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <div className="text-xl">Loading your baseball data...</div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
+
+  // Calculate dashboard stats
+  const totalGames = games.length;
+  const wins = games.filter(g => g.home_score !== null && g.away_score !== null && g.home_score > g.away_score).length;
+  const losses = games.filter(g => g.home_score !== null && g.away_score !== null && g.home_score < g.away_score).length;
+  const winPct = totalGames > 0 ? ((wins / totalGames) * 100).toFixed(1) : '0.0';
+  
+  // Calculate average runs per game
+  const totalRuns = games.reduce((sum, g) => {
+    if (g.home_score !== null && g.away_score !== null) {
+      return sum + g.home_score + g.away_score;
+    }
+    return sum;
+  }, 0);
+  const avgRuns = totalGames > 0 ? (totalRuns / totalGames).toFixed(1) : '0.0';
+  
+  // Find best/worst games by run differential
+  const gamesWithScores = games.filter(g => g.home_score !== null && g.away_score !== null);
+  const bestGame = gamesWithScores.length > 0 ? 
+    gamesWithScores.reduce((max, g) => {
+      const diff = (g.home_score! + g.away_score!) - (max.home_score! + max.away_score!);
+      return diff > 0 ? g : max;
+    }) : null;
+  const worstGame = gamesWithScores.length > 0 ? 
+    gamesWithScores.reduce((min, g) => {
+      const diff = (g.home_score! + g.away_score!) - (min.home_score! + min.away_score!);
+      return diff < 0 ? g : min;
+    }) : null;
+  
+  // Calculate current streak
+  const sortedGames = [...games].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  let currentStreak = 0;
+  let streakType = 'W';
+  
+  for (const game of sortedGames) {
+    if (game.home_score === null || game.away_score === null) continue;
+    const won = game.home_score > game.away_score;
+    
+    if (currentStreak === 0) {
+      currentStreak = 1;
+      streakType = won ? 'W' : 'L';
+    } else if ((won && streakType === 'W') || (!won && streakType === 'L')) {
+      currentStreak++;
+    } else {
+      break;
+    }
+  }
+  
+  // Days since last game
+  const lastGame = sortedGames[0];
+  const daysSinceLastGame = lastGame ? 
+    Math.floor((new Date().getTime() - new Date(lastGame.date).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -199,6 +250,71 @@ export default function Home() {
         <h1 className="text-2xl md:text-4xl font-bold mb-6 md:mb-8 text-center">
           Baxter Sox History
         </h1>
+        
+        {/* Dashboard Stats */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4">Dashboard</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <StatsCard 
+              title="Lifetime Record" 
+              value={`${wins}-${losses}`} 
+              subtitle={`${winPct}% win rate`}
+              icon="🏆"
+              color="blue"
+            />
+            <StatsCard 
+              title="Games Attended" 
+              value={totalGames} 
+              subtitle="Total games"
+              icon="⚾"
+              color="green"
+            />
+            <StatsCard 
+              title="Current Streak" 
+              value={`${currentStreak}${streakType}`} 
+              subtitle={streakType === 'W' ? 'Wins' : 'Losses'}
+              icon={streakType === 'W' ? '🔥' : '❄️'}
+              color={streakType === 'W' ? 'orange' : 'blue'}
+            />
+            <StatsCard 
+              title="Days Since Last Game" 
+              value={daysSinceLastGame} 
+              subtitle="Days ago"
+              icon="📅"
+              color="purple"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-1">
+              <div className="bg-gray-800/50 rounded-lg border border-blue-500/30 p-4">
+                <h3 className="text-sm font-medium text-gray-400 mb-2">Win Rate Trend</h3>
+                <WinLossSparkline games={games} />
+              </div>
+            </div>
+            <StatsCard 
+              title="Average Runs/Game" 
+              value={avgRuns} 
+              subtitle="Total runs per game"
+              icon="🏃"
+              color="green"
+            />
+            <div className="space-y-2">
+              <StatsCard 
+                title="Highest Scoring Game" 
+                value={bestGame ? `${bestGame.home_score! + bestGame.away_score!} runs` : 'N/A'} 
+                subtitle={bestGame ? formatDate(bestGame.date) : ''}
+                color="green"
+              />
+              <StatsCard 
+                title="Lowest Scoring Game" 
+                value={worstGame ? `${worstGame.home_score! + worstGame.away_score!} runs` : 'N/A'} 
+                subtitle={worstGame ? formatDate(worstGame.date) : ''}
+                color="red"
+              />
+            </div>
+          </div>
+        </div>
         
         <div className="flex overflow-x-auto gap-1 md:gap-2 mb-6 md:mb-8 border-b border-gray-700 scrollbar-hide">
           {tabs.map((tab) => (

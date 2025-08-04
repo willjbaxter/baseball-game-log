@@ -12,6 +12,7 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 import pandas as pd
+import httpx
 
 # ---------------------------------------------------------------------------
 DB_URL = os.getenv("DATABASE_URL")
@@ -26,6 +27,38 @@ if "+asyncpg" in DB_URL:
 engine = create_engine(DB_URL)
 
 # ---------------------------------------------------------------------------
+# Player name cache for MLB API lookups
+name_cache = {}
+
+def lookup_player(pid: int) -> str:
+    """Look up player name by ID using MLB Stats API."""
+    if pid in name_cache:
+        return name_cache[pid]
+    
+    url = f"https://statsapi.mlb.com/api/v1/people/{pid}"
+    try:
+        resp = httpx.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        full = data["people"][0]["fullName"]
+        name_cache[pid] = full
+        return full
+    except Exception as e:
+        print(f"Warning: Could not resolve player ID {pid}: {e}")
+        return str(pid)
+
+def resolve_pitcher_name(pitcher_name: str) -> str:
+    """Resolve pitcher name if it's an ID."""
+    if not pitcher_name:
+        return pitcher_name
+    
+    # Check if pitcher_name is numeric (an ID)
+    try:
+        pid = int(pitcher_name)
+        return lookup_player(pid)
+    except ValueError:
+        # Not an ID, return as-is
+        return pitcher_name
 
 def dump(df: pd.DataFrame, out_path: Path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -74,6 +107,11 @@ def export_all(out_dir: Path):
         """
     )
     longest_hrs = pd.read_sql(longest_hr_sql, engine)
+    
+    # Resolve pitcher IDs to names
+    print("Resolving pitcher names...")
+    longest_hrs['pitcher_name'] = longest_hrs['pitcher_name'].apply(resolve_pitcher_name)
+    
     dump(longest_hrs, out_dir / "longest_homers.json")
 
     # Lifetime WPA leaders (top 25)
@@ -123,6 +161,7 @@ def export_all(out_dir: Path):
         SELECT se.launch_speed,
                se.launch_angle,
                se.batter_name,
+               se.pitcher_name,
                se.event_type,
                se.raw_description,
                g.date,
@@ -137,6 +176,10 @@ def export_all(out_dir: Path):
         """
     )
     barrel_data = pd.read_sql(barrel_sql, engine)
+    
+    # Resolve pitcher IDs to names
+    print("Resolving pitcher names in barrel map data...")
+    barrel_data['pitcher_name'] = barrel_data['pitcher_name'].apply(resolve_pitcher_name)
     
     # Add outcome categorization
     def categorize_outcome(event_type):
