@@ -61,6 +61,12 @@ export default function RootLayout({
                   >
                     Highlights
                   </Link>
+                  <Link
+                    href="/playoff-odds"
+                    className="text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md text-sm font-medium"
+                  >
+                    Playoff Odds
+                  </Link>
                 </div>
               </div>
             </div>

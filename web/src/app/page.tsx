@@ -81,6 +81,7 @@ export default function Home() {
   const [longestHomers, setLongestHomers] = useState<LongestHomer[]>([]);
   const [barrelMapData, setBarrelMapData] = useState<BattedBall[]>([]);
   const [loading, setLoading] = useState(true);
+  const [pitcherNamesResolved, setPitcherNamesResolved] = useState(false);
   const [homersSortField, setHomersSortField] = useState<'distance' | 'launch_speed' | 'launch_angle' | 'date'>('distance');
   const [homersSortDirection, setHomersSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedYear, setSelectedYear] = useState<string>("all");
@@ -127,60 +128,28 @@ export default function Home() {
             filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
           }
           
-          // Transform JSON data to match component interfaces
-          const transformedHomers: LongestHomer[] = await Promise.all(filteredHomers.map(async h => {
-            let pitcherName = h.pitcher_name;
-            // If pitcher_name is numeric (an ID), try to resolve it
-            if (pitcherName && /^\d+$/.test(pitcherName)) {
-              try {
-                const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
-                if (response.ok) {
-                  const data = await response.json();
-                  pitcherName = data.people[0]?.fullName || pitcherName;
-                }
-              } catch (error) {
-                console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
-              }
-            }
-            
-            return {
-              distance: h.distance,
-              launch_speed: h.launch_speed,
-              launch_angle: h.launch_angle,
-              batter: h.batter_name,
-              pitcher: pitcherName,
-              date: h.date,
-              game_pk: h.game_pk
-            };
+          // Transform JSON data to match component interfaces (without pitcher name resolution)
+          const transformedHomers: LongestHomer[] = filteredHomers.map(h => ({
+            distance: h.distance,
+            launch_speed: h.launch_speed,
+            launch_angle: h.launch_angle,
+            batter: h.batter_name,
+            pitcher: h.pitcher_name,
+            date: h.date,
+            game_pk: h.game_pk
           }));
           
-          const transformedBarrel: BattedBall[] = await Promise.all(filteredBarrel.map(async b => {
-            let pitcherName = b.pitcher_name || "";
-            // If pitcher_name is numeric (an ID), try to resolve it
-            if (pitcherName && /^\d+$/.test(pitcherName)) {
-              try {
-                const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
-                if (response.ok) {
-                  const data = await response.json();
-                  pitcherName = data.people[0]?.fullName || pitcherName;
-                }
-              } catch (error) {
-                console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
-              }
-            }
-            
-            return {
-              exit_velocity: b.launch_speed,
-              launch_angle: b.launch_angle,
-              batter: b.batter_name,
-              pitcher: pitcherName,
-              outcome: b.outcome,
-              is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
-              date: b.date,
-              matchup: `${b.away_team} @ ${b.home_team}`,
-              description: b.description,
-              distance: b.distance ?? null
-            };
+          const transformedBarrel: BattedBall[] = filteredBarrel.map(b => ({
+            exit_velocity: b.launch_speed,
+            launch_angle: b.launch_angle,
+            batter: b.batter_name,
+            pitcher: b.pitcher_name || "",
+            outcome: b.outcome,
+            is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
+            date: b.date,
+            matchup: `${b.away_team} @ ${b.home_team}`,
+            description: b.description,
+            distance: b.distance ?? null
           }));
           
           setGames(gamesData || []);
@@ -213,6 +182,64 @@ export default function Home() {
 
     fetchData();
   }, [selectedYear]);
+
+  // Separate effect to resolve pitcher names after data is loaded
+  useEffect(() => {
+    const resolvePitcherNames = async () => {
+      if (pitcherNamesResolved || longestHomers.length === 0) return;
+      
+      console.log('Resolving pitcher names...');
+      
+      // Resolve pitcher names for longest homers
+      const resolvedHomers = await Promise.all(
+        longestHomers.map(async (homer) => {
+          let pitcherName = homer.pitcher;
+          if (pitcherName && /^\d+$/.test(pitcherName)) {
+            try {
+              console.log(`Resolving pitcher ID: ${pitcherName}`);
+              const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
+              if (response.ok) {
+                const data = await response.json();
+                const resolvedName = data.people[0]?.fullName || pitcherName;
+                console.log(`Resolved ${pitcherName} to ${resolvedName}`);
+                pitcherName = resolvedName;
+              }
+            } catch (error) {
+              console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
+            }
+          }
+          return { ...homer, pitcher: pitcherName };
+        })
+      );
+      
+      // Resolve pitcher names for barrel map data
+      const resolvedBarrel = await Promise.all(
+        barrelMapData.map(async (ball) => {
+          let pitcherName = ball.pitcher;
+          if (pitcherName && /^\d+$/.test(pitcherName)) {
+            try {
+              const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
+              if (response.ok) {
+                const data = await response.json();
+                const resolvedName = data.people[0]?.fullName || pitcherName;
+                pitcherName = resolvedName;
+              }
+            } catch (error) {
+              console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
+            }
+          }
+          return { ...ball, pitcher: pitcherName };
+        })
+      );
+      
+      setLongestHomers(resolvedHomers);
+      setBarrelMapData(resolvedBarrel);
+      setPitcherNamesResolved(true);
+      console.log('Pitcher names resolved!');
+    };
+
+    resolvePitcherNames();
+  }, [longestHomers, barrelMapData, pitcherNamesResolved]);
 
   const tabs = [
     { id: "games", label: "Games" },
