@@ -128,27 +128,59 @@ export default function Home() {
           }
           
           // Transform JSON data to match component interfaces
-          const transformedHomers: LongestHomer[] = filteredHomers.map(h => ({
-            distance: h.distance,
-            launch_speed: h.launch_speed,
-            launch_angle: h.launch_angle,
-            batter: h.batter_name,
-            pitcher: h.pitcher_name,
-            date: h.date,
-            game_pk: h.game_pk
+          const transformedHomers: LongestHomer[] = await Promise.all(filteredHomers.map(async h => {
+            let pitcherName = h.pitcher_name;
+            // If pitcher_name is numeric (an ID), try to resolve it
+            if (pitcherName && /^\d+$/.test(pitcherName)) {
+              try {
+                const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
+                if (response.ok) {
+                  const data = await response.json();
+                  pitcherName = data.people[0]?.fullName || pitcherName;
+                }
+              } catch (error) {
+                console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
+              }
+            }
+            
+            return {
+              distance: h.distance,
+              launch_speed: h.launch_speed,
+              launch_angle: h.launch_angle,
+              batter: h.batter_name,
+              pitcher: pitcherName,
+              date: h.date,
+              game_pk: h.game_pk
+            };
           }));
           
-          const transformedBarrel: BattedBall[] = filteredBarrel.map(b => ({
-            exit_velocity: b.launch_speed,
-            launch_angle: b.launch_angle,
-            batter: b.batter_name,
-            pitcher: b.pitcher_name || "",
-            outcome: b.outcome,
-            is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
-            date: b.date,
-            matchup: `${b.away_team} @ ${b.home_team}`,
-            description: b.description,
-            distance: b.distance ?? null
+          const transformedBarrel: BattedBall[] = await Promise.all(filteredBarrel.map(async b => {
+            let pitcherName = b.pitcher_name || "";
+            // If pitcher_name is numeric (an ID), try to resolve it
+            if (pitcherName && /^\d+$/.test(pitcherName)) {
+              try {
+                const response = await fetch(`https://statsapi.mlb.com/api/v1/people/${pitcherName}`);
+                if (response.ok) {
+                  const data = await response.json();
+                  pitcherName = data.people[0]?.fullName || pitcherName;
+                }
+              } catch (error) {
+                console.warn(`Could not resolve pitcher ID ${pitcherName}:`, error);
+              }
+            }
+            
+            return {
+              exit_velocity: b.launch_speed,
+              launch_angle: b.launch_angle,
+              batter: b.batter_name,
+              pitcher: pitcherName,
+              outcome: b.outcome,
+              is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
+              date: b.date,
+              matchup: `${b.away_team} @ ${b.home_team}`,
+              description: b.description,
+              distance: b.distance ?? null
+            };
           }));
           
           setGames(gamesData || []);
