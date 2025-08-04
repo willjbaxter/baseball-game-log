@@ -12,7 +12,13 @@ from pathlib import Path
 
 from sqlalchemy import create_engine, text
 import pandas as pd
-import httpx
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
+    print("Warning: httpx not available. Pitcher names will not be resolved.")
 
 # ---------------------------------------------------------------------------
 DB_URL = os.getenv("DATABASE_URL")
@@ -32,6 +38,9 @@ name_cache = {}
 
 def lookup_player(pid: int) -> str:
     """Look up player name by ID using MLB Stats API."""
+    if not HTTPX_AVAILABLE:
+        return str(pid)
+        
     if pid in name_cache:
         return name_cache[pid]
     
@@ -49,7 +58,7 @@ def lookup_player(pid: int) -> str:
 
 def resolve_pitcher_name(pitcher_name: str) -> str:
     """Resolve pitcher name if it's an ID."""
-    if not pitcher_name:
+    if not HTTPX_AVAILABLE or not pitcher_name:
         return pitcher_name
     
     # Check if pitcher_name is numeric (an ID)
