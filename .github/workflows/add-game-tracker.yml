@@ -86,17 +86,11 @@ jobs:
 
       - name: Export to both sites
         run: |
-          # Export to Hugo site
-          docker compose run --rm api python /app/scripts/export_json.py /app/scraper/site/data/
-          
-          # Export to Vercel site
-          docker compose run --rm api python /app/scripts/export_json.py /app/web/out/
-
-      - name: Copy exports to host
-        run: |
           mkdir -p site/static web/public
-          docker compose cp api:/app/scraper/site/data/ ./site/static/
-          docker compose cp api:/app/web/out/ ./web/public/
+          
+          # Export directly to host-mounted paths via the volume mount
+          docker compose run --rm api python /app/scripts/export_json.py ./site/static/
+          docker compose run --rm api python /app/scripts/export_json.py ./web/public/
 
       - name: Commit and push
         run: |
