@@ -100,5 +100,47 @@ def seed_games():
         db.close()
 
 
+def add_single_game(game_data):
+    """Add a single game to the database."""
+    db = SessionLocal()
+    
+    try:
+        # Check if game already exists
+        existing = db.query(Game).filter(
+            Game.date == game_data['date'],
+            Game.home_team == game_data['home_team'],
+            Game.away_team == game_data['away_team']
+        ).first()
+        
+        if existing:
+            print(f"Game already exists: {game_data['date']} {game_data['away_team']}@{game_data['home_team']}")
+            return existing
+        
+        # Create new game
+        new_game = Game(
+            date=game_data['date'],
+            home_team=game_data['home_team'],
+            away_team=game_data['away_team'],
+            mlb_game_pk=game_data.get('mlb_game_pk'),
+            home_score=game_data.get('home_score'),
+            away_score=game_data.get('away_score'),
+            attended=game_data.get('attended', False),
+            source=game_data.get('source', 'manual')
+        )
+        
+        db.add(new_game)
+        db.commit()
+        
+        print(f"✅ Added game: {game_data['date']} {game_data['away_team']}@{game_data['home_team']} (PK: {game_data.get('mlb_game_pk')})")
+        return new_game
+        
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error adding game: {e}")
+        raise
+    finally:
+        db.close()
+
+
 if __name__ == "__main__":
     seed_games() 
