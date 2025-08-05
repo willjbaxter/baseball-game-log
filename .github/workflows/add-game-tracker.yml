@@ -72,14 +72,38 @@ jobs:
         run: |
           docker compose run --rm api python -c "
           from scraper.seed_games import add_single_game
-          add_single_game({
-              'date': '${{ github.event.inputs.date }}',
-              'home_team': '${{ github.event.inputs.home_team }}',
-              'away_team': '${{ github.event.inputs.away_team }}',
-              'mlb_game_pk': ${{ steps.final_pk.outputs.game_pk }},
-              'attended': True,
-              'source': 'manual'
-          })"
+          import sys
+          try:
+              result = add_single_game({
+                  'date': '${{ github.event.inputs.date }}',
+                  'home_team': '${{ github.event.inputs.home_team }}',
+                  'away_team': '${{ github.event.inputs.away_team }}',
+                  'mlb_game_pk': ${{ steps.final_pk.outputs.game_pk }},
+                  'attended': True,
+                  'source': 'manual'
+              })
+              if not result:
+                  print('❌ Failed to add game to database')
+                  sys.exit(1)
+              print('✅ Game successfully added to database')
+          except Exception as e:
+              print(f'❌ Error adding game: {e}')
+              sys.exit(1)
+          "
+
+      - name: Validate game was added
+        if: ${{ steps.final_pk.outputs.game_pk != '' }}
+        run: |
+          # Verify the game exists in the database
+          docker compose exec db psql -U postgres -d game_log -c "
+          SELECT COUNT(*) as game_count 
+          FROM games 
+          WHERE mlb_game_pk = ${{ steps.final_pk.outputs.game_pk }};
+          " -t | grep -q "1" || {
+            echo "❌ Game validation failed - game not found in database"
+            exit 1
+          }
+          echo "✅ Game validation passed"
 
       - name: Fetch statcast data
         if: ${{ steps.final_pk.outputs.game_pk != '' }}
@@ -92,8 +116,19 @@ jobs:
           mkdir -p site/static web/public
           
           # Export directly to host-mounted paths via the volume mount
-          docker compose run --rm api python /app/scripts/export_json.py ./site/static/
-          docker compose run --rm api python /app/scripts/export_json.py ./web/public/
+          echo "Exporting to Hugo site..."
+          if ! docker compose run --rm api python /app/scripts/export_json.py ./site/static/; then
+            echo "❌ Failed to export to Hugo site"
+            exit 1
+          fi
+          
+          echo "Exporting to Vercel site..."
+          if ! docker compose run --rm api python /app/scripts/export_json.py ./web/public/; then
+            echo "❌ Failed to export to Vercel site" 
+            exit 1
+          fi
+          
+          echo "✅ Successfully exported to both sites"
 
       - name: Commit and push
         run: |

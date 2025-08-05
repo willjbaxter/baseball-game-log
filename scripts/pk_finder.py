@@ -11,8 +11,7 @@ from typing import Optional
 
 def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dict]:
     """
-    Find MLB game_pk for given date and teams.
-    Uses pybaseball as the primary method since MLB API schedule is unreliable.
+    Find MLB game_pk for given date and teams using MLB API.
     
     Args:
         game_date: Date in YYYY-MM-DD format
@@ -26,80 +25,70 @@ def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dic
     print(f"🔍 Searching for {away_team} @ {home_team} on {game_date}")
     
     try:
-        import pybaseball as pb
+        import sys
+        import os
+        sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__))))
         
-        # Search a range of game IDs around common ranges for the year
-        year = int(game_date[:4])
+        import httpx
+        from scraper.team_ids import TEAM_ID
         
-        # Determine search range based on year
-        if year >= 2024:
-            search_ranges = [range(745000, 750000), range(775000, 780000)]
-        elif year >= 2021:
-            search_ranges = [range(660900, 661000), range(633000, 634000), range(717000, 718000)]
-        else:
-            search_ranges = [range(565000, 566000)]  # 2019 range
+        # Get team IDs
+        home_team_id = TEAM_ID.get(home_team)
+        away_team_id = TEAM_ID.get(away_team)
         
+        if not home_team_id or not away_team_id:
+            print(f"❌ Unknown team abbreviation: {home_team} or {away_team}")
+            return None
         
-        print(f"🔎 Scanning game ID ranges for {year}...")
+        # Use MLB API to find games for the date
+        url = f"https://statsapi.mlb.com/api/v1/schedule"
+        params = {
+            "sportId": 1,
+            "date": game_date,
+            "teamId": home_team_id,
+            "opponentId": away_team_id,
+            "hydrate": "team,linescore,flags"
+        }
         
-        for search_range in search_ranges:
-            for game_id in search_range:
-                try:
-                    df = pb.statcast_single_game(game_id)
-                    if df is not None and not df.empty:
-                        # Get game info
-                        game_dates = df['game_date'].unique() if 'game_date' in df.columns else []
-                        home_teams = df['home_team'].unique() if 'home_team' in df.columns else []
-                        away_teams = df['away_team'].unique() if 'away_team' in df.columns else []
-                        
-                        if len(game_dates) > 0 and len(home_teams) > 0 and len(away_teams) > 0:
-                            game_date_str = str(game_dates[0])[:10]
-                            home_abbr = str(home_teams[0])
-                            away_abbr = str(away_teams[0])
-                            
-                            # Check for date and team match
-                            if (game_date_str == game_date and
-                                ((home_abbr == home_team and away_abbr == away_team) or
-                                 (home_abbr == away_team and away_abbr == home_team))):
-                                
-                                result = {
-                                    "game_pk": game_id,
-                                    "actual_home": home_abbr,
-                                    "actual_away": away_abbr,
-                                    "home_score": None,  # Statcast doesn't have final scores
-                                    "away_score": None,
-                                    "status": "Found via Statcast",
-                                    "venue": "Unknown",
-                                    "teams_swapped": (home_abbr == away_team and away_abbr == home_team),
-                                    "statcast_events": len(df)
-                                }
-                                
-                                print(f"✅ MATCH FOUND: Game {game_id}")
-                                print(f"   Date: {game_date_str}")
-                                print(f"   Teams: {result['actual_away']} @ {result['actual_home']}")
-                                print(f"   Statcast events: {len(df)}")
-                                
-                                if result["teams_swapped"]:
-                                    print("⚠️  WARNING: Teams are swapped from your input!")
-                                    print(f"   You said: {away_team} @ {home_team}")
-                                    print(f"   Actual:   {result['actual_away']} @ {result['actual_home']}")
-                                
-                                return result
-                                
-                except Exception:
-                    # Most game IDs will fail, that's expected
-                    pass
+        print(f"🔎 Querying MLB API for {game_date}...")
+        response = httpx.get(url, params=params, timeout=10)
+        response.raise_for_status()
         
-        print(f"❌ No match found for {away_team} @ {home_team} on {game_date}")
-        print("   This could mean:")
-        print("   1. The game date or teams are incorrect")
-        print("   2. The game has no Statcast data available")
-        print("   3. The game ID is outside the searched ranges")
+        data = response.json()
         
+        if not data.get("dates") or not data["dates"][0].get("games"):
+            print(f"❌ No games found for {away_team} @ {home_team} on {game_date}")
+            return None
+        
+        game = data["dates"][0]["games"][0]
+        
+        result = {
+            "game_pk": game["gamePk"],
+            "actual_home": game["teams"]["home"]["team"]["abbreviation"],
+            "actual_away": game["teams"]["away"]["team"]["abbreviation"],
+            "home_score": game["teams"]["home"].get("score"),
+            "away_score": game["teams"]["away"].get("score"),
+            "status": game["status"]["detailedState"],
+            "venue": game["venue"]["name"],
+            "teams_swapped": False,
+            "statcast_events": None
+        }
+        
+        print(f"✅ MATCH FOUND: Game {result['game_pk']}")
+        print(f"   Date: {game_date}")
+        print(f"   Teams: {result['actual_away']} @ {result['actual_home']}")
+        print(f"   Status: {result['status']}")
+        print(f"   Venue: {result['venue']}")
+        if result['home_score'] is not None:
+            print(f"   Score: {result['actual_away']} {result['away_score']} - {result['actual_home']} {result['home_score']}")
+        
+        return result
+        
+    except httpx.RequestError as e:
+        print(f"❌ MLB API request failed: {e}")
         return None
-        
     except ImportError:
-        print("❌ pybaseball not available, falling back to manual search")
+        print("❌ httpx library not available")
         return None
     except Exception as e:
         print(f"❌ Error searching for game: {e}")
