@@ -43,7 +43,9 @@ jobs:
         run: |
           docker compose up -d
           sleep 10
-          docker compose exec api python scripts/export_json.py site/static
+          mkdir -p site/static
+          docker compose exec api python scripts/export_json.py /app/scraper/site/data/
+          docker compose cp api:/app/scraper/site/data/ ./site/static/
       - name: Install Next.js dependencies
         run: npm ci
         working-directory: ./web
