@@ -3,6 +3,7 @@
 services:
   db:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -16,6 +17,7 @@ services:
     build:
       context: .
       dockerfile: api/Dockerfile
+    restart: unless-stopped
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/game_log
     depends_on:
