@@ -9,8 +9,7 @@ Personal Baseball Game Log is a multi-component system for tracking attended bas
 1. **Database Layer**: PostgreSQL with Alembic migrations managing game attendance, Statcast events, and scorecard pages
 2. **Data Pipeline**: Python scrapers that enrich game data via MLB Stats API and fetch Statcast events via pybaseball
 3. **API Layer**: FastAPI backend serving game data
-4. **Web Frontend**: Next.js application with data visualizations
-5. **Static Site**: Hugo-based site deployment pipeline
+4. **Web Frontend**: Next.js application with data visualizations deployed to Vercel at `baseball.willbaxter.info`
 
 ## Database Architecture
 
@@ -61,6 +60,9 @@ npm run build
 
 # Linting
 npm run lint
+
+# Deploy to production (auto-deploys on push to main via Vercel GitHub integration)
+# Manual deploy: vercel --prod
 ```
 
 ### Docker Operations
@@ -102,3 +104,4 @@ Key environment variables:
 - Statcast data includes Red Sox-relative WPA (Win Probability Added) calculations
 - Video URLs are fetched from MLB's game feed API using clip UUIDs from Statcast data
 - The web frontend consumes pre-exported JSON files rather than hitting the API directly for performance
+- Production deployment uses Vercel with custom domain `baseball.willbaxter.info` configured in both Cloudflare DNS and Vercel project settings
