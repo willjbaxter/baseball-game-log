@@ -41,7 +41,7 @@ def find_game_pk(game_date: str, home_team: str, away_team: str) -> Optional[dic
             return None
         
         # Use MLB API to find games for the date
-        url = f"https://statsapi.mlb.com/api/v1/schedule"
+        url = "https://statsapi.mlb.com/api/v1/schedule"
         params = {
             "sportId": 1,
             "date": game_date,
