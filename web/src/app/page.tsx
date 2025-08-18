@@ -61,6 +61,22 @@ interface JsonBattedBall {
   distance?: number;
 }
 
+interface WpaEvent {
+  wpa: number;
+  batter_name: string;
+  pitcher_name: string;
+  event_type: string;
+  raw_description: string;
+  mlb_game_pk: number;
+  clip_uuid?: string;
+  video_url?: string;
+  date: string;
+  home_team: string;
+  away_team: string;
+  home_score: number;
+  away_score: number;
+}
+
 
 interface BattedBall {
   exit_velocity: number;
@@ -80,6 +96,7 @@ export default function Home() {
   const [games, setGames] = useState<Game[]>([]);
   const [longestHomers, setLongestHomers] = useState<LongestHomer[]>([]);
   const [barrelMapData, setBarrelMapData] = useState<BattedBall[]>([]);
+  const [wpaEvents, setWpaEvents] = useState<WpaEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [pitcherNamesResolved, setPitcherNamesResolved] = useState(false);
   const [homersSortField, setHomersSortField] = useState<'distance' | 'launch_speed' | 'launch_angle' | 'date'>('distance');
@@ -105,27 +122,30 @@ export default function Home() {
     const fetchData = async () => {
       try {
         const isStatic = process.env.NODE_ENV === 'production';
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         
         if (isStatic) {
           // Static mode: fetch JSON files directly
-          const [gamesRes, homersRes, barrelRes] = await Promise.all([
+          const [gamesRes, homersRes, barrelRes, wpaRes] = await Promise.all([
             fetch("/games.json"),
             fetch("/longest_homers.json"),
-            fetch("/barrel_map.json")
+            fetch("/barrel_map.json"),
+            fetch("/drama_index.json")
           ]);
           
           const gamesData = await gamesRes.json();
           const homersData: JsonLongestHomer[] = await homersRes.json();
           const barrelData: JsonBattedBall[] = await barrelRes.json();
+          const wpaData: WpaEvent[] = await wpaRes.json();
           
           // Filter data on client side for static build
           let filteredHomers = homersData;
           let filteredBarrel = barrelData;
+          let filteredWpa = wpaData;
           
           if (selectedYear !== "all") {
             filteredHomers = homersData.filter(h => h.date.startsWith(selectedYear));
             filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
+            filteredWpa = wpaData.filter(w => w.date.startsWith(selectedYear));
           }
           
           // Transform JSON data to match component interfaces (without pitcher name resolution)
@@ -155,23 +175,60 @@ export default function Home() {
           setGames(gamesData || []);
           setLongestHomers(transformedHomers);
           setBarrelMapData(transformedBarrel);
+          setWpaEvents(filteredWpa);
         } else {
-          // Development mode: use API
-          const yearParam = selectedYear === "all" ? "" : `&year=${selectedYear}`;
-          const barrelYearParam = selectedYear === "all" ? "" : `year=${selectedYear}`;
-          const [gamesRes, homersRes, barrelRes] = await Promise.all([
-            fetch(`${apiUrl}/games`),
-            fetch(`${apiUrl}/statcast/longest-homers?limit=20${yearParam}`),
-            fetch(`${apiUrl}/statcast/barrel-map${barrelYearParam ? `?${barrelYearParam}` : ""}`)
+          // Development mode: fetch JSON files directly for now
+          const [gamesRes, homersRes, barrelRes, wpaRes] = await Promise.all([
+            fetch("/games.json"),
+            fetch("/longest_homers.json"),
+            fetch("/barrel_map.json"),
+            fetch("/drama_index.json")
           ]);
           
           const gamesData = await gamesRes.json();
-          const homersData = await homersRes.json();
-          const barrelMapData = await barrelRes.json();
+          const homersData: JsonLongestHomer[] = await homersRes.json();
+          const barrelData: JsonBattedBall[] = await barrelRes.json();
+          const wpaData: WpaEvent[] = await wpaRes.json();
+          
+          // Filter data on client side
+          let filteredHomers = homersData;
+          let filteredBarrel = barrelData;
+          let filteredWpa = wpaData;
+          
+          if (selectedYear !== "all") {
+            filteredHomers = homersData.filter(h => h.date.startsWith(selectedYear));
+            filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
+            filteredWpa = wpaData.filter(w => w.date.startsWith(selectedYear));
+          }
+          
+          // Transform JSON data to match component interfaces
+          const transformedHomers: LongestHomer[] = filteredHomers.map(h => ({
+            distance: h.distance,
+            launch_speed: h.launch_speed,
+            launch_angle: h.launch_angle,
+            batter: h.batter_name,
+            pitcher: h.pitcher_name,
+            date: h.date,
+            game_pk: h.game_pk
+          }));
+          
+          const transformedBarrel: BattedBall[] = filteredBarrel.map(b => ({
+            exit_velocity: b.launch_speed,
+            launch_angle: b.launch_angle,
+            batter: b.batter_name,
+            pitcher: b.pitcher_name || "",
+            outcome: b.outcome,
+            is_barrel: (b.launch_angle >= 8 && b.launch_angle <= 50) && (b.launch_speed >= 98),
+            date: b.date,
+            matchup: `${b.away_team} @ ${b.home_team}`,
+            description: b.description,
+            distance: b.distance ?? null
+          }));
 
-          setGames(gamesData.games || []);
-          setLongestHomers(homersData.homers || []);
-          setBarrelMapData(barrelMapData.batted_balls || []);
+          setGames(gamesData || []);
+          setLongestHomers(transformedHomers);
+          setBarrelMapData(transformedBarrel);
+          setWpaEvents(filteredWpa);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -244,7 +301,8 @@ export default function Home() {
   const tabs = [
     { id: "games", label: "Games" },
     { id: "longest-homers", label: "Longest HRs" },
-    { id: "barrel-map", label: "Barrel Map" }
+    { id: "barrel-map", label: "Barrel Map" },
+    { id: "drama-index", label: "Drama Index" }
   ];
 
   if (loading) {
@@ -516,6 +574,113 @@ export default function Home() {
                 </select>
               </div>
               <BarrelMap data={barrelMapData} />
+            </div>
+          )}
+
+          {activeTab === "drama-index" && (
+            <div>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+                <h2 className="text-xl md:text-2xl font-semibold">
+                  Drama Index - Top WPA Moments
+                </h2>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-gray-700 text-white px-3 py-2 rounded w-full sm:w-auto"
+                >
+                  <option value="all">All Years</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2021">2021</option>
+                  <option value="2019">2019</option>
+                </select>
+              </div>
+              
+              <div className="space-y-4">
+                {wpaEvents.map((event, idx) => {
+                  const wpaColor = event.wpa > 0 ? 'text-green-400' : 'text-red-400';
+                  const wpaIcon = event.wpa > 0 ? '📈' : '📉';
+                  const gameResult = event.home_score > event.away_score ? 'W' : 'L';
+                  const gameResultColor = gameResult === 'W' ? 'text-green-400' : 'text-red-400';
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className="bg-gray-800/40 border border-gray-700 rounded-lg p-4 md:p-6 hover:border-gray-600 transition-colors"
+                    >
+                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-2xl">{wpaIcon}</span>
+                            <span className={`text-xl md:text-2xl font-bold ${wpaColor}`}>
+                              WPA: {event.wpa > 0 ? '+' : ''}{event.wpa.toFixed(3)}
+                            </span>
+                            <span className="text-sm text-gray-400">#{idx + 1}</span>
+                          </div>
+                          
+                          <div className="mb-3">
+                            <div className="text-lg md:text-xl font-semibold text-white mb-1">
+                              {event.batter_name} vs {event.pitcher_name}
+                            </div>
+                            <div className="text-sm md:text-base text-blue-400 capitalize">
+                              {event.event_type.replace('_', ' ')}
+                            </div>
+                          </div>
+                          
+                          {event.raw_description && (
+                            <div className="text-sm md:text-base text-gray-300 mb-3 italic">
+                              &ldquo;{event.raw_description.length > 100 
+                                ? event.raw_description.substring(0, 100) + '...' 
+                                : event.raw_description}&rdquo;
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-col md:items-end text-sm md:text-base">
+                          <div className="text-gray-300 mb-1">
+                            {event.away_team} @ {event.home_team}
+                          </div>
+                          <div className="text-gray-300 mb-2">
+                            {formatDate(event.date)}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-semibold">
+                              {event.away_score}-{event.home_score}
+                            </span>
+                            <span className={`font-bold ${gameResultColor}`}>
+                              {gameResult}
+                            </span>
+                          </div>
+                          
+                          {event.video_url && (
+                            <a
+                              href={event.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mt-2 inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition-colors"
+                            >
+                              📹 Watch Video
+                            </a>
+                          )}
+                          
+                          {!event.video_url && event.clip_uuid && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Video available via MLB
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {wpaEvents.length === 0 && (
+                  <div className="text-center text-gray-400 py-8">
+                    No WPA data available for the selected year.
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
