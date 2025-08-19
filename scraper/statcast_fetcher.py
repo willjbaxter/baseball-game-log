@@ -178,21 +178,35 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 if not batter or batter == 'nan':
                     continue
                     
-                # Get WPA data - calculate from player's team perspective (neutral)
+                # Get WPA data - calculate as play-quality based (drama index)
                 d_home = row.get("delta_home_win_exp")
                 wpa_val = None
                 if d_home is not None and pd.notna(d_home):
-                    # Identify which team the batter was on
-                    batter_team = str(row.get("bat_team", "")).upper()
-                    home_team = str(row.get("home_team", "")).upper()
+                    event_type = str(row.get("events", "")).lower()
                     
-                    # Player-centric WPA: positive when player helps their own team
-                    if batter_team == home_team:
-                        # Player is on home team: positive d_home helps their team
-                        wpa_val = round(float(d_home), 6)
+                    # Take absolute value for drama magnitude
+                    wpa_magnitude = abs(float(d_home))
+                    
+                    # Determine sign based on play quality (positive = exciting/good, negative = disappointing/bad)
+                    positive_plays = {
+                        'single', 'double', 'triple', 'home_run', 
+                        'walk', 'hit_by_pitch', 'stolen_base_2b', 'stolen_base_3b', 'stolen_base_home'
+                    }
+                    negative_plays = {
+                        'field_error', 'strikeout', 'grounded_into_double_play', 
+                        'wild_pitch', 'passed_ball', 'caught_stealing_2b', 'caught_stealing_3b', 'caught_stealing_home'
+                    }
+                    
+                    if event_type in positive_plays:
+                        # Exciting/successful plays get positive WPA
+                        wpa_val = round(wpa_magnitude, 6)
+                    elif event_type in negative_plays:
+                        # Disappointing/failed plays get negative WPA  
+                        wpa_val = round(-wpa_magnitude, 6)
                     else:
-                        # Player is on away team: negative d_home helps their team
-                        wpa_val = round(-float(d_home), 6)
+                        # For neutral/unclear plays, keep original sign but use magnitude
+                        # This preserves the original dramatic impact direction
+                        wpa_val = round(float(d_home), 6)
                 
                 # Get exit velocity, launch angle, and distance
                 launch_speed = row.get("launch_speed")
@@ -269,21 +283,35 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if pd.isna(ls):
             continue
 
-        # Get WPA data - calculate from player's team perspective (neutral)
+        # Get WPA data - calculate as play-quality based (drama index)
         d_home = row.get("delta_home_win_exp")
         wpa_val = None
         if d_home is not None and pd.notna(d_home):
-            # Identify which team the batter was on
-            batter_team = str(row.get("bat_team", "")).upper()
-            home_team = str(row.get("home_team", "")).upper()
+            event_type = str(row.get("events", "")).lower()
             
-            # Player-centric WPA: positive when player helps their own team
-            if batter_team == home_team:
-                # Player is on home team: positive d_home helps their team
-                wpa_val = round(float(d_home), 6)
+            # Take absolute value for drama magnitude
+            wpa_magnitude = abs(float(d_home))
+            
+            # Determine sign based on play quality (positive = exciting/good, negative = disappointing/bad)
+            positive_plays = {
+                'single', 'double', 'triple', 'home_run', 
+                'walk', 'hit_by_pitch', 'stolen_base_2b', 'stolen_base_3b', 'stolen_base_home'
+            }
+            negative_plays = {
+                'field_error', 'strikeout', 'grounded_into_double_play', 
+                'wild_pitch', 'passed_ball', 'caught_stealing_2b', 'caught_stealing_3b', 'caught_stealing_home'
+            }
+            
+            if event_type in positive_plays:
+                # Exciting/successful plays get positive WPA
+                wpa_val = round(wpa_magnitude, 6)
+            elif event_type in negative_plays:
+                # Disappointing/failed plays get negative WPA  
+                wpa_val = round(-wpa_magnitude, 6)
             else:
-                # Player is on away team: negative d_home helps their team
-                wpa_val = round(-float(d_home), 6)
+                # For neutral/unclear plays, keep original sign but use magnitude
+                # This preserves the original dramatic impact direction
+                wpa_val = round(float(d_home), 6)
 
         clip_uuid = None
         video_url = None

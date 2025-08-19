@@ -98,10 +98,55 @@ Key environment variables:
 - `DATABASE_URL`: Database connection string (defaults to local postgres on port 5433)
 - Python path often needs to be set: `PYTHONPATH=.` for imports to work correctly
 
+## WPA Drama Analysis Implementation
+
+### Play-Quality Based WPA Calculation
+The system uses a unique **play-quality based WPA approach** rather than traditional team-based calculations:
+
+- **Positive WPA**: Exciting/skillful plays regardless of team (home runs, doubles, triples, walks)
+- **Negative WPA**: Disappointing/failed plays regardless of team (errors, strikeouts, double plays)
+- **Implementation**: `scraper/statcast_fetcher.py` converts team-based `delta_home_win_exp` to play-quality using event types
+
+This creates a team-agnostic drama measurement where Anthony Santander's HR gets +0.503 WPA (exciting) rather than negative (hurts Red Sox).
+
+### Heartbeat Charts Visualization 🫀📈
+Revolutionary EKG-style game drama visualization showing WPA swings as medical heartbeats:
+
+**Data Export Pipeline**:
+```bash
+# Generate heartbeat data from WPA events
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scripts/export_heartbeat_data.py
+```
+
+**Drama Categories**:
+- 🫀💥 **Cardiac Arrest** (70+ drama): High volatility, many significant moments
+- 📈💗 **Elevated Heartbeat** (40-69 drama): Moderate drama with notable swings  
+- 💚📊 **Steady Heartbeat** (20-39 drama): Some excitement but generally stable
+- 😴📉 **Flatline** (0-19 drama): Low excitement, minimal WPA swings
+
+**Technical Implementation**:
+- `scripts/export_heartbeat_data.py`: Calculates cumulative WPA timelines and drama scores
+- `web/src/components/HeartbeatChart.tsx`: SVG-based EKG visualization with medical aesthetics
+- **Drama Score Formula**: `(total_absolute_WPA * 10) + (significant_moments * 5) + (volatility * 20)`
+- **Interactive Features**: Single game view, stacked comparison, hover tooltips, year filtering
+
+**Data Files**:
+- `web/public/heartbeat_data.json`: Pre-exported game drama data for static site
+- `web/public/drama_index.json`: Top 50 WPA moments for Drama Index tab
+
+### Data Export Scripts
+```bash
+# Export all visualization data
+python3 scripts/export_json.py              # General game/stats data
+python3 scripts/export_wpa_drama.py         # Top WPA moments
+python3 scripts/export_heartbeat_data.py    # Game heartbeat timelines
+```
+
 ## Special Notes
 
 - Alembic migrations use psycopg2 driver but the API uses asyncpg - the alembic env.py handles this conversion automatically
-- Statcast data includes Red Sox-relative WPA (Win Probability Added) calculations
+- WPA calculations are **play-quality based** for drama analysis, not team-relative
 - Video URLs are fetched from MLB's game feed API using clip UUIDs from Statcast data
 - The web frontend consumes pre-exported JSON files rather than hitting the API directly for performance
 - Production deployment uses Vercel with custom domain `baseball.willbaxter.info` configured in both Cloudflare DNS and Vercel project settings
+- Heartbeat Charts use medical EKG aesthetics with SVG rendering for performance
