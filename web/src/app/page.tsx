@@ -5,6 +5,7 @@ import BarrelMap from "@/components/BarrelMap";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import StatsCard from "@/components/StatsCard";
 import WinLossSparkline from "@/components/WinLossSparkline";
+import HeartbeatChart from "@/components/HeartbeatChart";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -77,6 +78,32 @@ interface WpaEvent {
   away_score: number;
 }
 
+interface HeartbeatPoint {
+  x: number;
+  y: number;
+  wpa: number;
+  batter: string;
+  event: string;
+  description: string;
+}
+
+interface HeartbeatGame {
+  game_pk: number;
+  date: string;
+  matchup: string;
+  score: string;
+  result: 'W' | 'L';
+  drama_score: number;
+  drama_category: {
+    level: string;
+    emoji: string;
+    color: string;
+    label: string;
+  };
+  total_events: number;
+  heartbeat_points: HeartbeatPoint[];
+}
+
 
 interface BattedBall {
   exit_velocity: number;
@@ -97,6 +124,7 @@ export default function Home() {
   const [longestHomers, setLongestHomers] = useState<LongestHomer[]>([]);
   const [barrelMapData, setBarrelMapData] = useState<BattedBall[]>([]);
   const [wpaEvents, setWpaEvents] = useState<WpaEvent[]>([]);
+  const [heartbeatGames, setHeartbeatGames] = useState<HeartbeatGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [pitcherNamesResolved, setPitcherNamesResolved] = useState(false);
   const [homersSortField, setHomersSortField] = useState<'distance' | 'launch_speed' | 'launch_angle' | 'date'>('distance');
@@ -125,27 +153,31 @@ export default function Home() {
         
         if (isStatic) {
           // Static mode: fetch JSON files directly
-          const [gamesRes, homersRes, barrelRes, wpaRes] = await Promise.all([
+          const [gamesRes, homersRes, barrelRes, wpaRes, heartbeatRes] = await Promise.all([
             fetch("/games.json"),
             fetch("/longest_homers.json"),
             fetch("/barrel_map.json"),
-            fetch("/drama_index.json")
+            fetch("/drama_index.json"),
+            fetch("/heartbeat_data.json")
           ]);
           
           const gamesData = await gamesRes.json();
           const homersData: JsonLongestHomer[] = await homersRes.json();
           const barrelData: JsonBattedBall[] = await barrelRes.json();
           const wpaData: WpaEvent[] = await wpaRes.json();
+          const heartbeatData: HeartbeatGame[] = await heartbeatRes.json();
           
           // Filter data on client side for static build
           let filteredHomers = homersData;
           let filteredBarrel = barrelData;
           let filteredWpa = wpaData;
+          let filteredHeartbeat = heartbeatData;
           
           if (selectedYear !== "all") {
             filteredHomers = homersData.filter(h => h.date.startsWith(selectedYear));
             filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
             filteredWpa = wpaData.filter(w => w.date.startsWith(selectedYear));
+            filteredHeartbeat = heartbeatData.filter(h => h.date.startsWith(selectedYear));
           }
           
           // Transform JSON data to match component interfaces (without pitcher name resolution)
@@ -176,29 +208,34 @@ export default function Home() {
           setLongestHomers(transformedHomers);
           setBarrelMapData(transformedBarrel);
           setWpaEvents(filteredWpa);
+          setHeartbeatGames(filteredHeartbeat);
         } else {
           // Development mode: fetch JSON files directly for now
-          const [gamesRes, homersRes, barrelRes, wpaRes] = await Promise.all([
+          const [gamesRes, homersRes, barrelRes, wpaRes, heartbeatRes] = await Promise.all([
             fetch("/games.json"),
             fetch("/longest_homers.json"),
             fetch("/barrel_map.json"),
-            fetch("/drama_index.json")
+            fetch("/drama_index.json"),
+            fetch("/heartbeat_data.json")
           ]);
           
           const gamesData = await gamesRes.json();
           const homersData: JsonLongestHomer[] = await homersRes.json();
           const barrelData: JsonBattedBall[] = await barrelRes.json();
           const wpaData: WpaEvent[] = await wpaRes.json();
+          const heartbeatData: HeartbeatGame[] = await heartbeatRes.json();
           
           // Filter data on client side
           let filteredHomers = homersData;
           let filteredBarrel = barrelData;
           let filteredWpa = wpaData;
+          let filteredHeartbeat = heartbeatData;
           
           if (selectedYear !== "all") {
             filteredHomers = homersData.filter(h => h.date.startsWith(selectedYear));
             filteredBarrel = barrelData.filter(b => b.date.startsWith(selectedYear));
             filteredWpa = wpaData.filter(w => w.date.startsWith(selectedYear));
+            filteredHeartbeat = heartbeatData.filter(h => h.date.startsWith(selectedYear));
           }
           
           // Transform JSON data to match component interfaces
@@ -229,6 +266,7 @@ export default function Home() {
           setLongestHomers(transformedHomers);
           setBarrelMapData(transformedBarrel);
           setWpaEvents(filteredWpa);
+          setHeartbeatGames(filteredHeartbeat);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -302,7 +340,8 @@ export default function Home() {
     { id: "games", label: "Games" },
     { id: "longest-homers", label: "Longest HRs" },
     { id: "barrel-map", label: "Barrel Map" },
-    { id: "drama-index", label: "Drama Index" }
+    { id: "drama-index", label: "Drama Index" },
+    { id: "heartbeat", label: "Heartbeat 🫀" }
   ];
 
   if (loading) {
@@ -681,6 +720,39 @@ export default function Home() {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {activeTab === "heartbeat" && (
+            <div>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
+                <h2 className="text-xl md:text-2xl font-semibold">
+                  🫀 Heartbeat Charts - Game Drama Visualization
+                </h2>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                  className="bg-gray-700 text-white px-3 py-2 rounded w-full sm:w-auto"
+                >
+                  <option value="all">All Years</option>
+                  <option value="2025">2025</option>
+                  <option value="2024">2024</option>
+                  <option value="2023">2023</option>
+                  <option value="2021">2021</option>
+                  <option value="2019">2019</option>
+                </select>
+              </div>
+              
+              <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
+                <p className="text-gray-300 text-sm md:text-base">
+                  Each game is visualized as an EKG-style heartbeat where WPA swings create peaks and valleys. 
+                  <span className="text-green-400 font-semibold"> Peaks</span> represent exciting moments (home runs, clutch hits), 
+                  <span className="text-red-400 font-semibold"> valleys</span> represent disappointing moments (errors, strikeouts).
+                  Find your &ldquo;cardiac arrest games&rdquo; vs &ldquo;snoozers&rdquo;!
+                </p>
+              </div>
+
+              <HeartbeatChart games={heartbeatGames} />
             </div>
           )}
 
