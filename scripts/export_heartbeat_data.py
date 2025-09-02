@@ -155,7 +155,7 @@ def main():
             category = categorize_drama(50 if level == 'elevated' else 80 if level == 'cardiac_arrest' else 30 if level == 'steady' else 10)
             print(f"{category['emoji']} {category['label']}: {count} games")
         
-        print(f"\nTop 3 Most Dramatic Games:")
+        print("\nTop 3 Most Dramatic Games:")
         for i, game in enumerate(heartbeat_data[:3], 1):
             cat = game['drama_category']
             print(f"{i}. {cat['emoji']} {game['matchup']} ({game['date']}) - Drama: {game['drama_score']}")
