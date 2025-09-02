@@ -79,15 +79,52 @@ jobs:
           docker compose run --rm api python -c "
           from scraper.seed_games import add_single_game
           import sys
-          try:
-              result = add_single_game({
+          import httpx
+          from datetime import datetime
+          
+          game_pk = ${{ steps.final_pk.outputs.game_pk }}
+          print(f'Adding game PK: {game_pk}')
+          
+          # Fetch game details from MLB API if not provided
+          if '${{ github.event.inputs.date }}' and '${{ github.event.inputs.home_team }}' and '${{ github.event.inputs.away_team }}':
+              # Use manual inputs
+              game_data = {
                   'date': '${{ github.event.inputs.date }}',
                   'home_team': '${{ github.event.inputs.home_team }}',
                   'away_team': '${{ github.event.inputs.away_team }}',
-                  'mlb_game_pk': ${{ steps.final_pk.outputs.game_pk }},
+                  'mlb_game_pk': game_pk,
                   'attended': True,
                   'source': 'manual'
-              })
+              }
+          else:
+              # Fetch from MLB API
+              try:
+                  url = f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk={game_pk}&hydrate=team'
+                  resp = httpx.get(url, timeout=10)
+                  resp.raise_for_status()
+                  data = resp.json()
+                  
+                  if not data.get('dates') or not data['dates'][0].get('games'):
+                      raise Exception(f'No game data found for PK {game_pk}')
+                  
+                  game = data['dates'][0]['games'][0]
+                  game_date = game['gameDate'][:10]  # Extract YYYY-MM-DD
+                  
+                  game_data = {
+                      'date': game_date,
+                      'home_team': game['teams']['home']['team']['abbreviation'],
+                      'away_team': game['teams']['away']['team']['abbreviation'], 
+                      'mlb_game_pk': game_pk,
+                      'attended': True,
+                      'source': 'github_actions'
+                  }
+                  print(f'Fetched game: {game_data[\"away_team\"]} @ {game_data[\"home_team\"]} on {game_data[\"date\"]}')
+              except Exception as e:
+                  print(f'❌ Error fetching game details: {e}')
+                  sys.exit(1)
+          
+          try:
+              result = add_single_game(game_data)
               if not result:
                   print('❌ Failed to add game to database')
                   sys.exit(1)
