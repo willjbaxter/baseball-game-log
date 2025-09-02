@@ -48,6 +48,12 @@ jobs:
         run: |
           docker compose run --rm api alembic upgrade head
 
+      - name: Load existing games
+        run: |
+          echo "Loading all existing historical games..."
+          docker compose run --rm api python /app/scraper/seed_games.py
+          echo "✅ Loaded historical games"
+
       - name: Find game PK (if not provided)
         id: find_pk
         if: ${{ github.event.inputs.game_pk == '' && github.event.inputs.date != '' }}
@@ -105,11 +111,30 @@ jobs:
           }
           echo "✅ Game validation passed"
 
-      - name: Fetch statcast data
+      - name: Enrich all games
+        run: |
+          echo "Enriching all games with scores and venue data..."
+          docker compose run --rm api python /app/scraper/enrich_games.py
+          echo "✅ Games enriched"
+
+      - name: Fetch statcast data for new game
         if: ${{ steps.final_pk.outputs.game_pk != '' }}
         run: |
           docker compose run --rm api python /app/scraper/statcast_fetcher.py \
             --game ${{ steps.final_pk.outputs.game_pk }} --force
+
+      - name: Process all Statcast data
+        run: |
+          echo "Processing Statcast data for all games..."
+          docker compose run --rm api python /app/scraper/statcast_fetcher.py || true
+          echo "✅ Statcast processing complete"
+
+      - name: Generate drama and heartbeat data  
+        run: |
+          echo "Generating WPA drama data..."
+          docker compose run --rm api python /app/scripts/export_wpa_drama.py || true
+          docker compose run --rm api python /app/scripts/export_heartbeat_data.py || true
+          echo "✅ Drama data exported"
 
       - name: Export to both sites
         run: |
