@@ -150,7 +150,7 @@
     "away_score": 11
   },
   {
-    "wpa": -0.336,
+    "wpa": 0.336,
     "batter_name": "Connor Wong",
     "pitcher_name": "543056",
     "event_type": "home_run",
@@ -691,21 +691,6 @@
   },
   {
     "wpa": 0.17,
-    "batter_name": "Lawrence Butler",
-    "pitcher_name": "601713",
-    "event_type": "double",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 746934,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2024-07-10",
-    "home_team": "BOS",
-    "away_team": "OAK",
-    "home_score": 2,
-    "away_score": 5
-  },
-  {
-    "wpa": 0.17,
     "batter_name": "Jake Mangum",
     "pitcher_name": "547973",
     "event_type": "single",
@@ -720,19 +705,19 @@
     "away_score": 10
   },
   {
-    "wpa": 0.169,
-    "batter_name": "Wilyer Abreu",
-    "pitcher_name": "661395",
-    "event_type": "field_out",
+    "wpa": 0.17,
+    "batter_name": "Lawrence Butler",
+    "pitcher_name": "601713",
+    "event_type": "double",
     "raw_description": "hit_into_play",
-    "mlb_game_pk": 778073,
+    "mlb_game_pk": 746934,
     "clip_uuid": null,
     "video_url": null,
-    "date": "2025-05-03",
+    "date": "2024-07-10",
     "home_team": "BOS",
-    "away_team": "MIN",
-    "home_score": 3,
-    "away_score": 4
+    "away_team": "OAK",
+    "home_score": 2,
+    "away_score": 5
   },
   {
     "wpa": 0.169,
@@ -748,5 +733,20 @@
     "away_team": "BAL",
     "home_score": 3,
     "away_score": 11
+  },
+  {
+    "wpa": 0.169,
+    "batter_name": "Wilyer Abreu",
+    "pitcher_name": "661395",
+    "event_type": "field_out",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 778073,
+    "clip_uuid": null,
+    "video_url": null,
+    "date": "2025-05-03",
+    "home_team": "BOS",
+    "away_team": "MIN",
+    "home_score": 3,
+    "away_score": 4
   }
 ]
