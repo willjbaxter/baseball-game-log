@@ -8,8 +8,10 @@ Personal Baseball Game Log is a multi-component system for tracking attended bas
 
 1. **Database Layer**: PostgreSQL with Alembic migrations managing game attendance, Statcast events, and scorecard pages
 2. **Data Pipeline**: Python scrapers that enrich game data via MLB Stats API and fetch Statcast events via pybaseball
-3. **API Layer**: FastAPI backend serving game data
+3. **API Layer**: FastAPI backend serving game data  
 4. **Web Frontend**: Next.js application with data visualizations deployed to Vercel at `baseball.willbaxter.info`
+
+**Current Status**: 32 attended games tracked (2013-2025) with complete Statcast analytics including WPA drama analysis and revolutionary Heartbeat Charts visualization.
 
 ## Database Architecture
 
@@ -44,9 +46,9 @@ PYTHONPATH=. DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433
 ruff check
 black .
 
-# Data pipeline operations
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/enrich_games.py
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --game 660915 --force
+# Data pipeline operations (requires PYTHONPATH for imports)
+PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/enrich_games.py
+PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --game 660915 --force
 ```
 
 ### Web Development
@@ -136,11 +138,83 @@ DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log pyt
 
 ### Data Export Scripts
 ```bash
-# Export all visualization data
-python3 scripts/export_json.py              # General game/stats data
-python3 scripts/export_wpa_drama.py         # Top WPA moments
-python3 scripts/export_heartbeat_data.py    # Game heartbeat timelines
+# Export all visualization data (requires PYTHONPATH and DATABASE_URL)
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_json.py web/public/              # General game/stats data
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_wpa_drama.py         # Top WPA moments
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_heartbeat_data.py    # Game heartbeat timelines
 ```
+
+## Adding New Games Process
+
+### Recommended Workflow for Future Games
+
+**IMPORTANT**: Wait 24+ hours after game completion before adding games to ensure Statcast data is available.
+
+1. **Add game to local database first** (avoid GitHub Actions overwriting local data):
+   ```bash
+   # Add game manually to local database with auto-fetch from MLB API
+   DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 -c "
+   import httpx
+   from sqlalchemy import create_engine, text
+   from datetime import datetime
+   import os
+   
+   game_pk = XXXXX  # Replace with actual game PK
+   url = f'https://statsapi.mlb.com/api/v1/schedule?sportId=1&gamePk={game_pk}&hydrate=team'
+   resp = httpx.get(url, timeout=10)
+   data = resp.json()
+   game = data['dates'][0]['games'][0]
+   
+   # Extract and insert game details
+   date = datetime.fromisoformat(game['officialDate']).strftime('%Y-%m-%d')
+   home_team = game['teams']['home']['team']['abbreviation']
+   away_team = game['teams']['away']['team']['abbreviation']
+   home_score = game['teams']['home'].get('score')
+   away_score = game['teams']['away'].get('score')
+   venue_name = game['venue']['name']
+   
+   engine = create_engine(os.getenv('DATABASE_URL'))
+   with engine.connect() as conn:
+       conn.execute(text('''INSERT INTO games (mlb_game_pk, date, home_team, away_team, home_score, away_score, venue_name, attended)
+           VALUES (:pk, :date, :home_team, :away_team, :home_score, :away_score, :venue_name, true)'''), 
+           {'pk': game_pk, 'date': date, 'home_team': home_team, 'away_team': away_team, 
+            'home_score': home_score, 'away_score': away_score, 'venue_name': venue_name})
+       conn.commit()
+   print(f'Added game {game_pk}: {date} {away_team} @ {home_team} {away_score}-{home_score}')
+   "
+   ```
+
+2. **Fetch Statcast data**:
+   ```bash
+   PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --game XXXXX --force
+   ```
+
+3. **Run complete data export pipeline**:
+   ```bash
+   DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_json.py web/public/
+   DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_heartbeat_data.py
+   DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_wpa_drama.py
+   ```
+
+4. **Deploy to production**:
+   ```bash
+   cd web
+   npm run build
+   # Auto-deploys via Vercel GitHub integration when pushed to main
+   ```
+
+### Statcast Data Availability Timing
+- **Typical lag**: 24+ hours after game completion
+- **Test confirmed**: Game 776505 (Sept 1st, 2025) had no Statcast data when checked Sept 2nd
+- **pybaseball behavior**: Defaults to "yesterday's date" - optimized for next-day data availability  
+- **Recommendation**: Add games 24-48 hours after completion to ensure full data availability
+
+### Recent Debugging & Fixes (September 2025)
+- **Issue**: GitHub Actions workflow was overwriting local database with incomplete data, causing contaminated Statcast events from non-attended games to appear in visualizations
+- **Root Cause**: Export script was correctly resolving player IDs to names, but underlying game data included wrong game PKs from non-attended games
+- **Solution**: Always add games locally first, then commit; run complete export pipeline with proper environment variables
+- **Environment Setup**: All Python commands now include proper PYTHONPATH for venv imports
+- **Data Integrity**: Fixed export pipeline now correctly filters all data by `g.attended = true` and resolves player IDs to proper names
 
 ## Special Notes
 
@@ -150,3 +224,4 @@ python3 scripts/export_heartbeat_data.py    # Game heartbeat timelines
 - The web frontend consumes pre-exported JSON files rather than hitting the API directly for performance
 - Production deployment uses Vercel with custom domain `baseball.willbaxter.info` configured in both Cloudflare DNS and Vercel project settings
 - Heartbeat Charts use medical EKG aesthetics with SVG rendering for performance
+- **CRITICAL**: GitHub Actions workflow overwrites local JSON files - always add games locally first, then commit changes
