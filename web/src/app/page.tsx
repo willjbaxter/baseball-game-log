@@ -340,8 +340,7 @@ export default function Home() {
     { id: "games", label: "Games" },
     { id: "longest-homers", label: "Longest HRs" },
     { id: "barrel-map", label: "Barrel Map" },
-    { id: "drama-index", label: "Drama Index" },
-    { id: "heartbeat", label: "Heartbeat 🫀" }
+    { id: "heartbeat", label: "Heartbeat" }
   ];
 
   if (loading) {
@@ -616,118 +615,12 @@ export default function Home() {
             </div>
           )}
 
-          {activeTab === "drama-index" && (
-            <div>
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
-                <h2 className="text-xl md:text-2xl font-semibold">
-                  Drama Index - Top WPA Moments
-                </h2>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="bg-gray-700 text-white px-3 py-2 rounded w-full sm:w-auto"
-                >
-                  <option value="all">All Years</option>
-                  <option value="2025">2025</option>
-                  <option value="2024">2024</option>
-                  <option value="2023">2023</option>
-                  <option value="2021">2021</option>
-                  <option value="2019">2019</option>
-                </select>
-              </div>
-              
-              <div className="space-y-4">
-                {wpaEvents.map((event, idx) => {
-                  const wpaColor = event.wpa > 0 ? 'text-green-400' : 'text-red-400';
-                  const wpaIcon = event.wpa > 0 ? '📈' : '📉';
-                  const gameResult = event.home_score > event.away_score ? 'W' : 'L';
-                  const gameResultColor = gameResult === 'W' ? 'text-green-400' : 'text-red-400';
-                  
-                  return (
-                    <div
-                      key={idx}
-                      className="bg-gray-800/40 border border-gray-700 rounded-lg p-4 md:p-6 hover:border-gray-600 transition-colors"
-                    >
-                      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-2xl">{wpaIcon}</span>
-                            <span className={`text-xl md:text-2xl font-bold ${wpaColor}`}>
-                              WPA: {event.wpa > 0 ? '+' : ''}{event.wpa.toFixed(3)}
-                            </span>
-                            <span className="text-sm text-gray-400">#{idx + 1}</span>
-                          </div>
-                          
-                          <div className="mb-3">
-                            <div className="text-lg md:text-xl font-semibold text-white mb-1">
-                              {event.batter_name} vs {event.pitcher_name}
-                            </div>
-                            <div className="text-sm md:text-base text-blue-400 capitalize">
-                              {event.event_type.replace('_', ' ')}
-                            </div>
-                          </div>
-                          
-                          {event.raw_description && (
-                            <div className="text-sm md:text-base text-gray-300 mb-3 italic">
-                              &ldquo;{event.raw_description.length > 100 
-                                ? event.raw_description.substring(0, 100) + '...' 
-                                : event.raw_description}&rdquo;
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-col md:items-end text-sm md:text-base">
-                          <div className="text-gray-300 mb-1">
-                            {event.away_team} @ {event.home_team}
-                          </div>
-                          <div className="text-gray-300 mb-2">
-                            {formatDate(event.date)}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-white font-semibold">
-                              {event.away_score}-{event.home_score}
-                            </span>
-                            <span className={`font-bold ${gameResultColor}`}>
-                              {gameResult}
-                            </span>
-                          </div>
-                          
-                          {event.video_url && (
-                            <a
-                              href={event.video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="mt-2 inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1 rounded transition-colors"
-                            >
-                              📹 Watch Video
-                            </a>
-                          )}
-                          
-                          {!event.video_url && event.clip_uuid && (
-                            <div className="mt-2 text-xs text-gray-500">
-                              Video available via MLB
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {wpaEvents.length === 0 && (
-                  <div className="text-center text-gray-400 py-8">
-                    No WPA data available for the selected year.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {activeTab === "heartbeat" && (
             <div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-3">
                 <h2 className="text-xl md:text-2xl font-semibold">
-                  🫀 Heartbeat Charts - Game Drama Visualization
+                  Heartbeat Charts - Game Drama Visualization
                 </h2>
                 <select
                   value={selectedYear}
@@ -745,10 +638,11 @@ export default function Home() {
               
               <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
                 <p className="text-gray-300 text-sm md:text-base">
-                  Each game is visualized as an EKG-style heartbeat where WPA swings create peaks and valleys. 
-                  <span className="text-green-400 font-semibold"> Peaks</span> represent exciting moments (home runs, clutch hits), 
-                  <span className="text-red-400 font-semibold"> valleys</span> represent disappointing moments (errors, strikeouts).
-                  Find your &ldquo;cardiac arrest games&rdquo; vs &ldquo;snoozers&rdquo;!
+                  Y-axis shows <strong className="text-white">cumulative WPA (Win Probability Added)</strong> - 
+                  tracks how Red Sox win probability changes throughout each game. 
+                  <span className="text-green-400 font-semibold"> Positive values</span> = Red Sox favored, 
+                  <span className="text-red-400 font-semibold"> negative values</span> = opponent favored.
+                  Hover over dots for play details.
                 </p>
               </div>
 

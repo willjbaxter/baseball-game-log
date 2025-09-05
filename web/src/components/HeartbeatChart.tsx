@@ -8,6 +8,9 @@ interface HeartbeatPoint {
   batter: string;
   event: string;
   description: string;
+  situation?: string;
+  score_context?: string;
+  pitcher?: string;
 }
 
 interface HeartbeatGame {
@@ -33,11 +36,14 @@ interface HeartbeatChartProps {
 
 export default function HeartbeatChart({ games }: HeartbeatChartProps) {
   const [selectedGame, setSelectedGame] = useState<HeartbeatGame | null>(null);
-  const [viewMode, setViewMode] = useState<'single' | 'stacked'>('single');
+  const [viewMode, setViewMode] = useState<'stacked' | 'single'>('stacked');
   const [hoveredPoint, setHoveredPoint] = useState<{game: HeartbeatGame, point: HeartbeatPoint} | null>(null);
 
-  // Chart dimensions
-  const chartWidth = 800;
+  // Sort games chronologically (recent first)
+  const sortedGames = [...games].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  // Chart dimensions - make responsive to container width
+  const chartWidth = 1200; // Increased width
   const chartHeight = 200;
   const margin = { top: 20, right: 20, bottom: 40, left: 60 };
   const innerWidth = chartWidth - margin.left - margin.right;
@@ -52,12 +58,13 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
     const maxWpa = Math.max(...allWpaValues, 0);
     const wpaRange = Math.max(Math.abs(minWpa), Math.abs(maxWpa), 0.5);
 
-    // Scale functions
-    const xScale = (x: number) => (x / Math.max(game.heartbeat_points.length - 1, 1)) * innerWidth;
+    // Scale functions - x is now 0-1 game progression
+    const xScale = (x: number) => x * innerWidth;
     const yScale = (y: number) => innerHeight - ((y + wpaRange) / (2 * wpaRange)) * innerHeight;
 
-    // Generate path for the line
-    const pathData = game.heartbeat_points
+    // Generate path for the line - sort points by x coordinate for proper path
+    const sortedPoints = [...game.heartbeat_points].sort((a, b) => a.x - b.x);
+    const pathData = sortedPoints
       .map((point, i) => `${i === 0 ? 'M' : 'L'} ${xScale(point.x)} ${yScale(point.y)}`)
       .join(' ');
 
@@ -100,7 +107,19 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
 
         {/* Drama peaks/valleys */}
         {game.heartbeat_points.map((point, i) => {
-          const isSignificant = Math.abs(point.wpa) > 0.15;
+          // Dynamic threshold based on game drama level
+          let threshold = 0.15; // Default for high drama
+          if (game.drama_score >= 70) {
+            threshold = 0.15; // Cardiac Arrest: high bar
+          } else if (game.drama_score >= 40) {
+            threshold = 0.10; // Elevated: moderate bar
+          } else if (game.drama_score >= 20) {
+            threshold = 0.05; // Steady: low bar
+          } else {
+            threshold = 0.02; // Flatline: very low bar
+          }
+          
+          const isSignificant = Math.abs(point.wpa) > threshold;
           if (!isSignificant) return null;
 
           return (
@@ -127,7 +146,7 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
           fill="#e5e7eb"
           fontWeight="bold"
         >
-          {game.drama_category.emoji} {game.matchup} ({game.date}) - {game.result} {game.score}
+          {game.matchup} ({game.date}) - {game.result} {game.score}
         </text>
 
         {/* Drama score */}
@@ -204,7 +223,7 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
   };
 
   const totalHeight = viewMode === 'stacked' 
-    ? (selectedGame ? chartHeight : games.length * (chartHeight + 10))
+    ? (selectedGame ? chartHeight : sortedGames.length * (chartHeight + 10))
     : chartHeight;
 
   return (
@@ -238,15 +257,15 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
           <select
             value={selectedGame?.game_pk || ''}
             onChange={(e) => {
-              const game = games.find(g => g.game_pk === parseInt(e.target.value));
+              const game = sortedGames.find(g => g.game_pk === parseInt(e.target.value));
               setSelectedGame(game || null);
             }}
             className="bg-gray-700 text-white px-3 py-2 rounded w-full sm:w-auto"
           >
             <option value="">Select a game...</option>
-            {games.map(game => (
+            {sortedGames.map(game => (
               <option key={game.game_pk} value={game.game_pk}>
-                {game.drama_category.emoji} {game.matchup} ({game.date}) - Drama: {game.drama_score}
+                {game.matchup} ({game.date}) - Drama: {game.drama_score}
               </option>
             ))}
           </select>
@@ -254,12 +273,12 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto">
-        <svg width={chartWidth} height={totalHeight + 50} className="text-white">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 overflow-x-auto w-full">
+        <svg width="100%" height={totalHeight + 50} className="text-white min-w-[1200px]">
           {viewMode === 'single' && selectedGame ? (
             renderSingleGameChart(selectedGame)
           ) : viewMode === 'stacked' ? (
-            games.map((game, index) => renderSingleGameChart(game, index))
+            sortedGames.map((game, index) => renderSingleGameChart(game, index))
           ) : (
             <text
               x={chartWidth / 2}
@@ -276,17 +295,37 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
 
       {/* Tooltip */}
       {hoveredPoint && (
-        <div className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg pointer-events-none">
+        <div 
+          className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg pointer-events-none"
+          style={{
+            left: `${window.innerWidth / 2}px`,
+            top: `${window.innerHeight / 2}px`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        >
           <div className="text-sm">
             <div className="font-semibold text-white">
               {hoveredPoint.point.batter} - {hoveredPoint.point.event}
             </div>
+            {hoveredPoint.point.pitcher && (
+              <div className="text-gray-300 text-xs">
+                vs {hoveredPoint.point.pitcher}
+              </div>
+            )}
             <div className={`font-bold ${hoveredPoint.point.wpa > 0 ? 'text-green-400' : 'text-red-400'}`}>
               WPA: {hoveredPoint.point.wpa > 0 ? '+' : ''}{hoveredPoint.point.wpa.toFixed(3)}
             </div>
-            {hoveredPoint.point.description && (
-              <div className="text-gray-300 text-xs mt-1">
-                {hoveredPoint.point.description.substring(0, 60)}...
+            <div className="text-gray-400 text-xs mt-1">
+              Running total: {hoveredPoint.point.y.toFixed(3)}
+            </div>
+            {hoveredPoint.point.situation && (
+              <div className="text-blue-300 text-xs mt-1">
+                {hoveredPoint.point.situation}
+              </div>
+            )}
+            {hoveredPoint.point.score_context && (
+              <div className="text-orange-300 text-xs mt-1">
+                {hoveredPoint.point.score_context}
               </div>
             )}
           </div>
@@ -297,19 +336,19 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <span>🫀💥 Cardiac Arrest (70+)</span>
+          <span>Cardiac Arrest (70+)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-          <span>📈💗 Elevated (40-69)</span>
+          <span>Elevated (40-69)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-          <span>💚📊 Steady (20-39)</span>
+          <span>Steady (20-39)</span>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
-          <span>😴📉 Flatline (0-19)</span>
+          <span>Flatline (0-19)</span>
         </div>
       </div>
     </div>
