@@ -92,6 +92,9 @@ def export_all(out_dir: Path):
         """
     )
     games = pd.read_sql(games_sql, engine)
+    # Transform score format to always show high-low score
+    # Note: We keep the original home/away team and score fields for context
+    # The display logic in frontend will use max/min for score display
     dump(games, out_dir / "games.json")
 
     # Longest home runs (top 100 by distance)

@@ -50,6 +50,23 @@ def normalize_player_name(name: str) -> str:
     return name
 
 
+def lookup_player_name(player_id: int) -> str:
+    """Look up player name from MLB API using player ID."""
+    if not player_id or pd.isna(player_id):
+        return ""
+        
+    url = f"https://statsapi.mlb.com/api/v1/people/{int(player_id)}"
+    try:
+        resp = httpx.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        full_name = data['people'][0]['fullName']
+        return full_name
+    except Exception:
+        # If lookup fails, return the ID as string
+        return str(int(player_id))
+
+
 def get_gf_lookup(pk: int) -> dict[str, str]:
     """Return {sv_id: play_id} mapping for a game_pk using Baseball Savant gf feed.
 
@@ -178,35 +195,13 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 if not batter or batter == 'nan':
                     continue
                     
-                # Get WPA data - calculate as play-quality based (drama index)
+                # Get WPA data - use objective team-based WPA (delta_home_win_exp)
                 d_home = row.get("delta_home_win_exp")
                 wpa_val = None
                 if d_home is not None and pd.notna(d_home):
-                    event_type = str(row.get("events", "")).lower()
-                    
-                    # Take absolute value for drama magnitude
-                    wpa_magnitude = abs(float(d_home))
-                    
-                    # Determine sign based on play quality (positive = exciting/good, negative = disappointing/bad)
-                    positive_plays = {
-                        'single', 'double', 'triple', 'home_run', 
-                        'walk', 'hit_by_pitch', 'stolen_base_2b', 'stolen_base_3b', 'stolen_base_home'
-                    }
-                    negative_plays = {
-                        'field_error', 'strikeout', 'grounded_into_double_play', 
-                        'wild_pitch', 'passed_ball', 'caught_stealing_2b', 'caught_stealing_3b', 'caught_stealing_home'
-                    }
-                    
-                    if event_type in positive_plays:
-                        # Exciting/successful plays get positive WPA
-                        wpa_val = round(wpa_magnitude, 6)
-                    elif event_type in negative_plays:
-                        # Disappointing/failed plays get negative WPA  
-                        wpa_val = round(-wpa_magnitude, 6)
-                    else:
-                        # For neutral/unclear plays, keep original sign but use magnitude
-                        # This preserves the original dramatic impact direction
-                        wpa_val = round(float(d_home), 6)
+                    # Use the raw delta_home_win_exp value as WPA
+                    # Positive = helped home team, Negative = helped away team
+                    wpa_val = round(float(d_home), 6)
                 
                 # Get exit velocity, launch angle, and distance
                 launch_speed = row.get("launch_speed")
@@ -234,12 +229,34 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                     lookup = get_gf_lookup(g.mlb_game_pk)
                     clip_uuid = lookup.get(str(sv_id))
 
+                # Get context fields for enhanced tooltips
+                inning_val = safe_int(row.get("inning"))
+                inning_topbot_val = str(row.get("inning_topbot", "")) if pd.notna(row.get("inning_topbot")) else None
+                outs_val = safe_int(row.get("outs_when_up"))
+                home_score_val = safe_int(row.get("home_score"))
+                away_score_val = safe_int(row.get("away_score"))
+                post_home_score_val = safe_int(row.get("post_home_score"))
+                post_away_score_val = safe_int(row.get("post_away_score"))
+                
+                # Baserunners (clean up NaN values)
+                on_1b_val = str(row.get("on_1b", "")) if pd.notna(row.get("on_1b")) else None
+                on_2b_val = str(row.get("on_2b", "")) if pd.notna(row.get("on_2b")) else None
+                on_3b_val = str(row.get("on_3b", "")) if pd.notna(row.get("on_3b")) else None
+                
+                # Count
+                balls_val = safe_int(row.get("balls"))
+                strikes_val = safe_int(row.get("strikes"))
+
+                # Resolve pitcher name from ID
+                pitcher_id = row.get("pitcher")
+                pitcher_name = lookup_player_name(pitcher_id) if pitcher_id and pd.notna(pitcher_id) else ""
+
                 events.append(
                     StatcastEvent(
                         mlb_game_pk=g.mlb_game_pk,
                         event_datetime=str(row.get("game_date", "")),
                         batter_name=batter,
-                        pitcher_name=str(row.get("pitcher", "")),
+                        pitcher_name=pitcher_name,
                         pitch_type=str(row.get("pitch_type", "")),
                         launch_speed=ev_val,
                         launch_angle=la_val,
@@ -249,6 +266,19 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                         wpa=wpa_val,
                         hit_distance_sc=distance_val,
                         clip_uuid=clip_uuid,
+                        # Context fields
+                        inning=inning_val,
+                        inning_topbot=inning_topbot_val,
+                        outs_when_up=outs_val,
+                        home_score=home_score_val,
+                        away_score=away_score_val,
+                        post_home_score=post_home_score_val,
+                        post_away_score=post_away_score_val,
+                        on_1b=on_1b_val,
+                        on_2b=on_2b_val,
+                        on_3b=on_3b_val,
+                        balls=balls_val,
+                        strikes=strikes_val,
                     )
                 )
             
@@ -283,35 +313,13 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if pd.isna(ls):
             continue
 
-        # Get WPA data - calculate as play-quality based (drama index)
+        # Get WPA data - use objective team-based WPA (delta_home_win_exp)
         d_home = row.get("delta_home_win_exp")
         wpa_val = None
         if d_home is not None and pd.notna(d_home):
-            event_type = str(row.get("events", "")).lower()
-            
-            # Take absolute value for drama magnitude
-            wpa_magnitude = abs(float(d_home))
-            
-            # Determine sign based on play quality (positive = exciting/good, negative = disappointing/bad)
-            positive_plays = {
-                'single', 'double', 'triple', 'home_run', 
-                'walk', 'hit_by_pitch', 'stolen_base_2b', 'stolen_base_3b', 'stolen_base_home'
-            }
-            negative_plays = {
-                'field_error', 'strikeout', 'grounded_into_double_play', 
-                'wild_pitch', 'passed_ball', 'caught_stealing_2b', 'caught_stealing_3b', 'caught_stealing_home'
-            }
-            
-            if event_type in positive_plays:
-                # Exciting/successful plays get positive WPA
-                wpa_val = round(wpa_magnitude, 6)
-            elif event_type in negative_plays:
-                # Disappointing/failed plays get negative WPA  
-                wpa_val = round(-wpa_magnitude, 6)
-            else:
-                # For neutral/unclear plays, keep original sign but use magnitude
-                # This preserves the original dramatic impact direction
-                wpa_val = round(float(d_home), 6)
+            # Use the raw delta_home_win_exp value as WPA
+            # Positive = helped home team, Negative = helped away team
+            wpa_val = round(float(d_home), 6)
 
         clip_uuid = None
         video_url = None
@@ -338,12 +346,34 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
         if hit_distance is not None and pd.notna(hit_distance):
             distance_val = safe_int(hit_distance)
 
+        # Get context fields for enhanced tooltips (fallback section)
+        inning_val = safe_int(row.get("inning"))
+        inning_topbot_val = str(row.get("inning_topbot", "")) if pd.notna(row.get("inning_topbot")) else None
+        outs_val = safe_int(row.get("outs_when_up"))
+        home_score_val = safe_int(row.get("home_score"))
+        away_score_val = safe_int(row.get("away_score"))
+        post_home_score_val = safe_int(row.get("post_home_score"))
+        post_away_score_val = safe_int(row.get("post_away_score"))
+        
+        # Baserunners (clean up NaN values)
+        on_1b_val = str(row.get("on_1b", "")) if pd.notna(row.get("on_1b")) else None
+        on_2b_val = str(row.get("on_2b", "")) if pd.notna(row.get("on_2b")) else None
+        on_3b_val = str(row.get("on_3b", "")) if pd.notna(row.get("on_3b")) else None
+        
+        # Count
+        balls_val = safe_int(row.get("balls"))
+        strikes_val = safe_int(row.get("strikes"))
+
+        # Resolve pitcher name from ID (fallback section)
+        pitcher_id = row.get("pitcher")
+        pitcher_name = lookup_player_name(pitcher_id) if pitcher_id and pd.notna(pitcher_id) else ""
+
         events.append(
             StatcastEvent(
                 mlb_game_pk=g.mlb_game_pk,
                 event_datetime=str(row.get("game_date", "")),
                 batter_name=str(row.get("player_name", "")),
-                pitcher_name=str(row.get("pitcher", "")),
+                pitcher_name=pitcher_name,
                 pitch_type=str(row.get("pitch_type", "")),
                 launch_speed=safe_int(ls),
                 launch_angle=safe_int(la),
@@ -354,6 +384,19 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 hit_distance_sc=distance_val,
                 clip_uuid=clip_uuid,
                 video_url=video_url,
+                # Context fields
+                inning=inning_val,
+                inning_topbot=inning_topbot_val,
+                outs_when_up=outs_val,
+                home_score=home_score_val,
+                away_score=away_score_val,
+                post_home_score=post_home_score_val,
+                post_away_score=post_away_score_val,
+                on_1b=on_1b_val,
+                on_2b=on_2b_val,
+                on_3b=on_3b_val,
+                balls=balls_val,
+                strikes=strikes_val,
             )
         )
 

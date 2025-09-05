@@ -209,12 +209,89 @@ DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYT
 - **pybaseball behavior**: Defaults to "yesterday's date" - optimized for next-day data availability  
 - **Recommendation**: Add games 24-48 hours after completion to ensure full data availability
 
-### Recent Debugging & Fixes (September 2025)
-- **Issue**: GitHub Actions workflow was overwriting local database with incomplete data, causing contaminated Statcast events from non-attended games to appear in visualizations
-- **Root Cause**: Export script was correctly resolving player IDs to names, but underlying game data included wrong game PKs from non-attended games
-- **Solution**: Always add games locally first, then commit; run complete export pipeline with proper environment variables
-- **Environment Setup**: All Python commands now include proper PYTHONPATH for venv imports
-- **Data Integrity**: Fixed export pipeline now correctly filters all data by `g.attended = true` and resolves player IDs to proper names
+### Recent Development & Fixes (September 2025)
+
+#### Enhanced Heartbeat Tooltips Implementation 🎯
+- **Feature**: Implemented rich contextual tooltips for heartbeat chart visualization
+- **Database Schema**: Added 12 context fields to `StatcastEvent` model (inning, outs, score, baserunners, count)
+- **Pitcher Name Resolution**: Added MLB API integration to resolve player IDs to actual pitcher names
+- **Enhanced Export**: Updated `export_heartbeat_data.py` to include game situation context
+- **Frontend Enhancement**: Improved `HeartbeatChart.tsx` with comprehensive tooltip display
+- **Performance**: Uses pre-computed JSON export for fast client-side rendering
+
+**Enhanced Tooltip Format:**
+```
+Player Name - event_type
+vs Pitcher Name  
+WPA: +0.153
+Running total: +0.504
+Bot 2, 0 outs, 2-2 count
+Score: 2-0 → 2-2
+```
+
+#### Data Integrity & WPA Corrections
+- **WPA Fix**: Corrected WPA calculation from Boston-relative to objective team-based values
+- **Issue**: Home runs and triples were incorrectly showing negative WPA due to flipped sign logic
+- **Solution**: Use raw `delta_home_win_exp` values (positive = helped home team, negative = helped away team)
+- **Impact**: All 32 games re-processed with corrected WPA values (9,798 total events)
+
+#### Current Enhanced Tooltip Coverage
+- **Status**: 70.9% of statcast events have enhanced tooltips (6,740/9,512 events)
+- **Fully Enhanced Games**: TB@BOS, NYY@BOS, LAD@BOS, KC@BOS with proper pitcher names and context
+- **Remaining**: 29.1% still show player IDs pending MLB API resolution batch processing
+
+## Production Deployment Next Steps
+
+### 1. Complete Enhanced Tooltip Rollout (Optional)
+```bash
+# Process remaining games with pitcher name resolution (time-intensive due to MLB API calls)
+PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --force
+
+# Re-export all data with enhanced context
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_heartbeat_data.py
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_json.py web/public/
+```
+
+### 2. Production Deployment Pipeline
+```bash
+# 1. Verify frontend builds successfully
+cd web && npm run build
+
+# 2. Commit all changes
+git add .
+git commit -m "feat: enhanced heartbeat tooltips with game context and pitcher names
+
+- Add contextual fields to StatcastEvent model (inning, outs, score, count)
+- Implement MLB API pitcher name resolution
+- Fix WPA calculation to use objective team-based values  
+- Enhance HeartbeatChart tooltips with rich game context
+- Remove Drama Index tab (replaced by improved Heartbeat Charts)
+
+🤖 Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+
+# 3. Push to production
+git push origin main
+
+# 4. Verify auto-deployment on Vercel
+# Check https://baseball.willbaxter.info for updated tooltips
+```
+
+### 3. Post-Deployment Verification
+- **Test enhanced tooltips** on recent games (2025 season)
+- **Verify WPA values** show correct signs (home runs positive for home team, negative for away team)  
+- **Confirm pitcher names** appear instead of player IDs on processed games
+- **Check drama scores** reflect corrected WPA calculations
+
+### 4. Future Game Addition Workflow (Updated)
+```bash
+# For new games, use enhanced statcast fetcher with pitcher name resolution
+PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --game XXXXX --force
+
+# Export with enhanced context 
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_heartbeat_data.py
+```
 
 ## Special Notes
 

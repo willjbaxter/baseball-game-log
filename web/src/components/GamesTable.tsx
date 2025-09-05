@@ -132,7 +132,11 @@ export default function GamesTable({ games }: { games: GameRow[] }) {
                 {g.away_team} @ {g.home_team}
               </td>
               <td className="p-2 md:p-3 border text-right text-xs md:text-sm">
-                {g.away_score !== null && g.home_score !== null ? `${Math.max(g.away_score, g.home_score)}-${Math.min(g.away_score, g.home_score)}` : "TBD"}
+                {g.away_score !== null && g.home_score !== null ? (
+                  <span className={g.home_score > g.away_score ? "text-green-400" : "text-red-400"}>
+                    {g.home_score > g.away_score ? "W " : "L "}{Math.max(g.away_score, g.home_score)}-{Math.min(g.away_score, g.home_score)}
+                  </span>
+                ) : "TBD"}
               </td>
             </tr>
           ))}

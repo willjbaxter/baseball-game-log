@@ -66,6 +66,20 @@ class StatcastEvent(Base):
     hit_distance_sc = Column(Integer, nullable=True)  # Statcast distance in feet
     clip_uuid = Column(String(40), nullable=True)
     video_url = Column(Text, nullable=True)  # Direct URL to MP4
+    
+    # Game context fields for enhanced tooltips
+    inning = Column(Integer, nullable=True)
+    inning_topbot = Column(String(3), nullable=True)  # "Top" or "Bot"
+    outs_when_up = Column(Integer, nullable=True)  # 0, 1, or 2
+    home_score = Column(Integer, nullable=True)  # Score before play
+    away_score = Column(Integer, nullable=True)  # Score before play  
+    post_home_score = Column(Integer, nullable=True)  # Score after play
+    post_away_score = Column(Integer, nullable=True)  # Score after play
+    on_1b = Column(String(100), nullable=True)  # Runner on 1st base name
+    on_2b = Column(String(100), nullable=True)  # Runner on 2nd base name  
+    on_3b = Column(String(100), nullable=True)  # Runner on 3rd base name
+    balls = Column(Integer, nullable=True)  # Ball count
+    strikes = Column(Integer, nullable=True)  # Strike count
 
     def __repr__(self):
         return f"<StatcastEvent game_pk={self.mlb_game_pk} ev={self.launch_speed}>" 
