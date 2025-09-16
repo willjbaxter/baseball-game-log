@@ -1,8 +1,8 @@
 [
   {
-    "wpa": 0.503,
+    "wpa": -0.503,
     "batter_name": "Anthony Santander",
-    "pitcher_name": "669711",
+    "pitcher_name": "Greg Weissert",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746977,
@@ -15,9 +15,9 @@
     "away_score": 9
   },
   {
-    "wpa": -0.466,
+    "wpa": 0.466,
     "batter_name": "Abraham Toro",
-    "pitcher_name": "693855",
+    "pitcher_name": "Ian Seymour",
     "event_type": "field_error",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777584,
@@ -30,9 +30,24 @@
     "away_score": 10
   },
   {
-    "wpa": -0.408,
+    "wpa": 0.458,
+    "batter_name": "David Ortiz",
+    "pitcher_name": "Joaqu\u00edn Benoit",
+    "event_type": "home_run",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 379719,
+    "clip_uuid": "03797196-0666-0013-000c-f08cd117d70a",
+    "video_url": null,
+    "date": "2013-10-13",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "home_score": 6,
+    "away_score": 5
+  },
+  {
+    "wpa": 0.408,
     "batter_name": "Justin Turner",
-    "pitcher_name": "572955",
+    "pitcher_name": "Pierce Johnson",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 717242,
@@ -45,9 +60,9 @@
     "away_score": 3
   },
   {
-    "wpa": -0.403,
+    "wpa": 0.403,
     "batter_name": "Kristian Campbell",
-    "pitcher_name": "664126",
+    "pitcher_name": "Pete Fairbanks",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777584,
@@ -60,9 +75,9 @@
     "away_score": 10
   },
   {
-    "wpa": -0.37,
+    "wpa": 0.37,
     "batter_name": "Carlos Narv\u00e1ez",
-    "pitcher_name": "657612",
+    "pitcher_name": "Tim Hill",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777537,
@@ -75,9 +90,9 @@
     "away_score": 1
   },
   {
-    "wpa": -0.366,
+    "wpa": 0.366,
     "batter_name": "Rafael Devers",
-    "pitcher_name": "572955",
+    "pitcher_name": "Pierce Johnson",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777893,
@@ -90,9 +105,9 @@
     "away_score": 6
   },
   {
-    "wpa": 0.362,
+    "wpa": -0.362,
     "batter_name": "Jason Castro",
-    "pitcher_name": "543135",
+    "pitcher_name": "Nathan Eovaldi",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660923,
@@ -105,9 +120,9 @@
     "away_score": 9
   },
   {
-    "wpa": -0.358,
+    "wpa": 0.358,
     "batter_name": "Jarren Duran",
-    "pitcher_name": "572955",
+    "pitcher_name": "Pierce Johnson",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777893,
@@ -120,9 +135,9 @@
     "away_score": 6
   },
   {
-    "wpa": 0.355,
+    "wpa": -0.355,
     "batter_name": "Aaron Judge",
-    "pitcher_name": "676979",
+    "pitcher_name": "Garrett Crochet",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777537,
@@ -135,9 +150,9 @@
     "away_score": 1
   },
   {
-    "wpa": 0.345,
+    "wpa": -0.345,
     "batter_name": "Trent Grisham",
-    "pitcher_name": "445276",
+    "pitcher_name": "Kenley Jansen",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746931,
@@ -152,7 +167,7 @@
   {
     "wpa": 0.336,
     "batter_name": "Connor Wong",
-    "pitcher_name": "543056",
+    "pitcher_name": "Danny Coulombe",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746977,
@@ -165,9 +180,9 @@
     "away_score": 9
   },
   {
-    "wpa": -0.326,
+    "wpa": 0.326,
     "batter_name": "Christian V\u00e1zquez",
-    "pitcher_name": "656638",
+    "pitcher_name": "Alex Lange",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 634255,
@@ -180,9 +195,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.322,
+    "wpa": -0.322,
     "batter_name": "Will Brennan",
-    "pitcher_name": "669711",
+    "pitcher_name": "Greg Weissert",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746974,
@@ -195,9 +210,9 @@
     "away_score": 6
   },
   {
-    "wpa": 0.313,
+    "wpa": -0.313,
     "batter_name": "Gunnar Henderson",
-    "pitcher_name": "663462",
+    "pitcher_name": "Isaiah Campbell",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746977,
@@ -210,9 +225,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.3,
+    "wpa": -0.3,
     "batter_name": "Junior Caminero",
-    "pitcher_name": "677161",
+    "pitcher_name": "Zack Kelly",
     "event_type": "walk",
     "raw_description": "ball",
     "mlb_game_pk": 777584,
@@ -225,9 +240,9 @@
     "away_score": 10
   },
   {
-    "wpa": 0.299,
+    "wpa": -0.299,
     "batter_name": "Kody Clemens",
-    "pitcher_name": "690928",
+    "pitcher_name": "Hunter Dobbins",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 778073,
@@ -240,9 +255,9 @@
     "away_score": 4
   },
   {
-    "wpa": 0.296,
+    "wpa": -0.296,
     "batter_name": "J.D. Martinez",
-    "pitcher_name": "677651",
+    "pitcher_name": "Luis Garcia",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660913,
@@ -255,9 +270,9 @@
     "away_score": 5
   },
   {
-    "wpa": 0.294,
+    "wpa": -0.294,
     "batter_name": "Harrison Bader",
-    "pitcher_name": "686580",
+    "pitcher_name": "Justin Slaten",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 778063,
@@ -270,9 +285,9 @@
     "away_score": 5
   },
   {
-    "wpa": -0.292,
+    "wpa": 0.292,
     "batter_name": "Romy Gonzalez",
-    "pitcher_name": "664076",
+    "pitcher_name": "Garrett Cleavinger",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777584,
@@ -285,9 +300,9 @@
     "away_score": 10
   },
   {
-    "wpa": -0.281,
+    "wpa": 0.281,
     "batter_name": "Rafael Devers",
-    "pitcher_name": "663556",
+    "pitcher_name": "Shane McClanahan",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660927,
@@ -300,9 +315,9 @@
     "away_score": 5
   },
   {
-    "wpa": 0.276,
+    "wpa": -0.276,
     "batter_name": "Gleyber Torres",
-    "pitcher_name": "502624",
+    "pitcher_name": "Chase Anderson",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746931,
@@ -315,9 +330,9 @@
     "away_score": 11
   },
   {
-    "wpa": -0.261,
+    "wpa": 0.261,
     "batter_name": "Franchy Cordero",
-    "pitcher_name": "642397",
+    "pitcher_name": "Gregory Soto",
     "event_type": "field_error",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 634255,
@@ -330,9 +345,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.257,
+    "wpa": -0.257,
     "batter_name": "Ryan Jeffers",
-    "pitcher_name": "676477",
+    "pitcher_name": "Garrett Whitlock",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 778063,
@@ -345,9 +360,9 @@
     "away_score": 5
   },
   {
-    "wpa": -0.254,
+    "wpa": 0.254,
     "batter_name": "Abraham Toro",
-    "pitcher_name": "664126",
+    "pitcher_name": "Pete Fairbanks",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777584,
@@ -360,9 +375,9 @@
     "away_score": 10
   },
   {
-    "wpa": 0.253,
+    "wpa": -0.253,
     "batter_name": "Jose Altuve",
-    "pitcher_name": "676477",
+    "pitcher_name": "Garrett Whitlock",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660923,
@@ -375,9 +390,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.245,
+    "wpa": -0.245,
     "batter_name": "Ozzie Albies",
-    "pitcher_name": "678394",
+    "pitcher_name": "Brayan Bello",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 717242,
@@ -390,9 +405,9 @@
     "away_score": 3
   },
   {
-    "wpa": 0.242,
+    "wpa": -0.242,
     "batter_name": "Wilson Ramos",
-    "pitcher_name": "542882",
+    "pitcher_name": "Matt Andriese",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 634255,
@@ -405,9 +420,24 @@
     "away_score": 9
   },
   {
-    "wpa": 0.238,
+    "wpa": -0.238,
+    "batter_name": "Randy Arozarena",
+    "pitcher_name": "Ryan Brasier",
+    "event_type": "single",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 660927,
+    "clip_uuid": null,
+    "video_url": null,
+    "date": "2021-10-11",
+    "home_team": "BOS",
+    "away_team": "TB",
+    "home_score": 6,
+    "away_score": 5
+  },
+  {
+    "wpa": -0.238,
     "batter_name": "Connor Wong",
-    "pitcher_name": "663485",
+    "pitcher_name": "Cole Sands",
     "event_type": "grounded_into_double_play",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 778073,
@@ -420,24 +450,9 @@
     "away_score": 4
   },
   {
-    "wpa": 0.238,
-    "batter_name": "Randy Arozarena",
-    "pitcher_name": "518489",
-    "event_type": "single",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 660927,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2021-10-11",
-    "home_team": "BOS",
-    "away_team": "TB",
-    "home_score": 6,
-    "away_score": 5
-  },
-  {
-    "wpa": -0.228,
+    "wpa": 0.228,
     "batter_name": "Tyler O'Neill",
-    "pitcher_name": "543859",
+    "pitcher_name": "Michael Tonkin",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746931,
@@ -450,9 +465,9 @@
     "away_score": 11
   },
   {
-    "wpa": -0.221,
+    "wpa": 0.221,
     "batter_name": "Jasson Dom\u00ednguez",
-    "pitcher_name": "676477",
+    "pitcher_name": "Garrett Whitlock",
     "event_type": "nan",
     "raw_description": "ball",
     "mlb_game_pk": 777537,
@@ -465,9 +480,9 @@
     "away_score": 1
   },
   {
-    "wpa": -0.218,
+    "wpa": 0.218,
     "batter_name": "Yandy D\u00edaz",
-    "pitcher_name": "677161",
+    "pitcher_name": "Zack Kelly",
     "event_type": "strikeout",
     "raw_description": "swinging_strike",
     "mlb_game_pk": 777584,
@@ -480,9 +495,9 @@
     "away_score": 10
   },
   {
-    "wpa": 0.202,
+    "wpa": -0.202,
     "batter_name": "Trevor Story",
-    "pitcher_name": "656546",
+    "pitcher_name": "Jeff Hoffman",
     "event_type": "strikeout",
     "raw_description": "swinging_strike",
     "mlb_game_pk": 778386,
@@ -495,9 +510,9 @@
     "away_score": 2
   },
   {
-    "wpa": -0.201,
+    "wpa": 0.201,
     "batter_name": "Xander Bogaerts",
-    "pitcher_name": "425844",
+    "pitcher_name": "Zack Greinke",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660923,
@@ -510,9 +525,9 @@
     "away_score": 9
   },
   {
-    "wpa": -0.201,
+    "wpa": 0.201,
     "batter_name": "Xander Bogaerts",
-    "pitcher_name": "579328",
+    "pitcher_name": "Yusei Kikuchi",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 634386,
@@ -525,9 +540,9 @@
     "away_score": 5
   },
   {
-    "wpa": -0.2,
+    "wpa": 0.2,
     "batter_name": "Masataka Yoshida",
-    "pitcher_name": "593334",
+    "pitcher_name": "Domingo Germ\u00e1n",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 717742,
@@ -540,9 +555,9 @@
     "away_score": 5
   },
   {
-    "wpa": -0.191,
+    "wpa": 0.191,
     "batter_name": "Xander Bogaerts",
-    "pitcher_name": "543037",
+    "pitcher_name": "Gerrit Cole",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660938,
@@ -555,9 +570,9 @@
     "away_score": 2
   },
   {
-    "wpa": -0.19,
+    "wpa": 0.19,
     "batter_name": "Rafael Devers",
-    "pitcher_name": "571656",
+    "pitcher_name": "Buck Farmer",
     "event_type": "single",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 634255,
@@ -570,9 +585,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.188,
+    "wpa": -0.188,
     "batter_name": "Hunter Renfroe",
-    "pitcher_name": "656557",
+    "pitcher_name": "Tanner Houck",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 718580,
@@ -585,9 +600,9 @@
     "away_score": 3
   },
   {
-    "wpa": 0.186,
+    "wpa": -0.186,
     "batter_name": "Josh Lowe",
-    "pitcher_name": "657514",
+    "pitcher_name": "Brennan Bernardino",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777584,
@@ -600,9 +615,9 @@
     "away_score": 10
   },
   {
-    "wpa": 0.182,
+    "wpa": -0.182,
     "batter_name": "Marcelo Mayer",
-    "pitcher_name": "657612",
+    "pitcher_name": "Tim Hill",
     "event_type": "strikeout",
     "raw_description": "swinging_strike",
     "mlb_game_pk": 777537,
@@ -615,9 +630,9 @@
     "away_score": 1
   },
   {
-    "wpa": -0.18,
+    "wpa": 0.18,
     "batter_name": "Xander Bogaerts",
-    "pitcher_name": "547888",
+    "pitcher_name": "Masahiro Tanaka",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 565076,
@@ -630,9 +645,9 @@
     "away_score": 3
   },
   {
-    "wpa": 0.176,
+    "wpa": -0.176,
     "batter_name": "Kevin Kiermaier",
-    "pitcher_name": "518489",
+    "pitcher_name": "Ryan Brasier",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660927,
@@ -645,24 +660,9 @@
     "away_score": 5
   },
   {
-    "wpa": 0.174,
-    "batter_name": "Bryan De La Cruz",
-    "pitcher_name": "676477",
-    "event_type": "home_run",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 717605,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2023-06-27",
-    "home_team": "BOS",
-    "away_team": "MIA",
-    "home_score": 1,
-    "away_score": 10
-  },
-  {
-    "wpa": 0.174,
+    "wpa": -0.174,
     "batter_name": "Matt Olson",
-    "pitcher_name": "608337",
+    "pitcher_name": "Lucas Giolito",
     "event_type": "home_run",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 777893,
@@ -675,9 +675,39 @@
     "away_score": 6
   },
   {
-    "wpa": 0.172,
+    "wpa": -0.174,
+    "batter_name": "Bryan De La Cruz",
+    "pitcher_name": "Garrett Whitlock",
+    "event_type": "home_run",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 717605,
+    "clip_uuid": null,
+    "video_url": null,
+    "date": "2023-06-27",
+    "home_team": "BOS",
+    "away_team": "MIA",
+    "home_score": 1,
+    "away_score": 10
+  },
+  {
+    "wpa": 0.173,
+    "batter_name": "Jonny Gomes",
+    "pitcher_name": "Rick Porcello",
+    "event_type": "single",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 379719,
+    "clip_uuid": "03797196-0716-0043-000c-f08cd117d70a",
+    "video_url": null,
+    "date": "2013-10-13",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "home_score": 6,
+    "away_score": 5
+  },
+  {
+    "wpa": -0.172,
     "batter_name": "Carlos Correa",
-    "pitcher_name": "543135",
+    "pitcher_name": "Nathan Eovaldi",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 660923,
@@ -690,24 +720,9 @@
     "away_score": 9
   },
   {
-    "wpa": 0.17,
-    "batter_name": "Jake Mangum",
-    "pitcher_name": "547973",
-    "event_type": "single",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 777584,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2025-06-09",
-    "home_team": "BOS",
-    "away_team": "TB",
-    "home_score": 8,
-    "away_score": 10
-  },
-  {
-    "wpa": 0.17,
+    "wpa": -0.17,
     "batter_name": "Lawrence Butler",
-    "pitcher_name": "601713",
+    "pitcher_name": "Nick Pivetta",
     "event_type": "double",
     "raw_description": "hit_into_play",
     "mlb_game_pk": 746934,
@@ -720,33 +735,18 @@
     "away_score": 5
   },
   {
-    "wpa": 0.169,
-    "batter_name": "Maikel Franco",
-    "pitcher_name": "572070",
-    "event_type": "double",
+    "wpa": -0.17,
+    "batter_name": "Jake Mangum",
+    "pitcher_name": "Aroldis Chapman",
+    "event_type": "single",
     "raw_description": "hit_into_play",
-    "mlb_game_pk": 634610,
+    "mlb_game_pk": 777584,
     "clip_uuid": null,
     "video_url": null,
-    "date": "2021-04-04",
+    "date": "2025-06-09",
     "home_team": "BOS",
-    "away_team": "BAL",
-    "home_score": 3,
-    "away_score": 11
-  },
-  {
-    "wpa": 0.169,
-    "batter_name": "Wilyer Abreu",
-    "pitcher_name": "661395",
-    "event_type": "field_out",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 778073,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2025-05-03",
-    "home_team": "BOS",
-    "away_team": "MIN",
-    "home_score": 3,
-    "away_score": 4
+    "away_team": "TB",
+    "home_score": 8,
+    "away_score": 10
   }
 ]
