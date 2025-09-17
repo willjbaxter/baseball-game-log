@@ -80,6 +80,10 @@ class StatcastEvent(Base):
     on_3b = Column(String(100), nullable=True)  # Runner on 3rd base name
     balls = Column(Integer, nullable=True)  # Ball count
     strikes = Column(Integer, nullable=True)  # Strike count
+    
+    # Absolute win probability values (0-1 scale)
+    home_win_exp = Column(Float, nullable=True)  # Home team win probability after play
+    away_win_exp = Column(Float, nullable=True)  # Away team win probability after play
 
     def __repr__(self):
         return f"<StatcastEvent game_pk={self.mlb_game_pk} ev={self.launch_speed}>" 

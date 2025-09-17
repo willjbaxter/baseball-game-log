@@ -203,6 +203,14 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                     # Positive = helped home team, Negative = helped away team
                     wpa_val = round(float(d_home), 6)
                 
+                # Get absolute win probability values
+                home_win_exp_val = None
+                away_win_exp_val = None
+                home_wp = row.get("home_win_exp")
+                if home_wp is not None and pd.notna(home_wp):
+                    home_win_exp_val = round(float(home_wp), 4)
+                    away_win_exp_val = round(1.0 - float(home_wp), 4)
+                
                 # Get exit velocity, launch angle, and distance
                 launch_speed = row.get("launch_speed")
                 launch_angle = row.get("launch_angle")
@@ -279,6 +287,9 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                         on_3b=on_3b_val,
                         balls=balls_val,
                         strikes=strikes_val,
+                        # Win probability fields
+                        home_win_exp=home_win_exp_val,
+                        away_win_exp=away_win_exp_val,
                     )
                 )
             
@@ -320,6 +331,14 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
             # Use the raw delta_home_win_exp value as WPA
             # Positive = helped home team, Negative = helped away team
             wpa_val = round(float(d_home), 6)
+        
+        # Get absolute win probability values (fallback section)
+        home_win_exp_val = None
+        away_win_exp_val = None
+        home_wp = row.get("home_win_exp")
+        if home_wp is not None and pd.notna(home_wp):
+            home_win_exp_val = round(float(home_wp), 4)
+            away_win_exp_val = round(1.0 - float(home_wp), 4)
 
         clip_uuid = None
         video_url = None
@@ -397,6 +416,9 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
                 on_3b=on_3b_val,
                 balls=balls_val,
                 strikes=strikes_val,
+                # Win probability fields
+                home_win_exp=home_win_exp_val,
+                away_win_exp=away_win_exp_val,
             )
         )
 

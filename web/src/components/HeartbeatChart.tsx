@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 interface HeartbeatPoint {
   x: number;
   y: number;
+  prev_y?: number;
   wpa: number;
   batter: string;
   event: string;
@@ -28,6 +29,7 @@ interface HeartbeatGame {
   };
   total_events: number;
   heartbeat_points: HeartbeatPoint[];
+  home_team?: string;  // Optional for backward compatibility
 }
 
 interface HeartbeatChartProps {
@@ -52,56 +54,95 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
   const renderSingleGameChart = (game: HeartbeatGame, index: number = 0) => {
     if (!game.heartbeat_points.length) return null;
 
-    // Calculate scales
-    const allWpaValues = game.heartbeat_points.map(p => p.y);
-    const minWpa = Math.min(...allWpaValues, 0);
-    const maxWpa = Math.max(...allWpaValues, 0);
-    const wpaRange = Math.max(Math.abs(minWpa), Math.abs(maxWpa), 0.5);
-
-    // Scale functions - x is now 0-1 game progression
+    // Scale functions for win probability (0-1 range)
     const xScale = (x: number) => x * innerWidth;
-    const yScale = (y: number) => innerHeight - ((y + wpaRange) / (2 * wpaRange)) * innerHeight;
+    const yScale = (y: number) => innerHeight - (y * innerHeight);  // y is 0-1 win probability
 
-    // Generate path for the line - sort points by x coordinate for proper path
-    const sortedPoints = [...game.heartbeat_points].sort((a, b) => a.x - b.x);
+    // Generate smooth path for the line - ensure unique x positions
+    const sortedPoints = [...game.heartbeat_points]
+      .sort((a, b) => a.x - b.x)
+      .filter((point, i, arr) => i === 0 || point.x !== arr[i-1].x); // Remove duplicate x positions
+    
+    // Create smooth curve using bezier curves
     const pathData = sortedPoints
-      .map((point, i) => `${i === 0 ? 'M' : 'L'} ${xScale(point.x)} ${yScale(point.y)}`)
+      .map((point, i, arr) => {
+        if (i === 0) {
+          return `M ${xScale(point.x)} ${yScale(point.y)}`;
+        }
+        // Use line for smooth transitions
+        return `L ${xScale(point.x)} ${yScale(point.y)}`;
+      })
       .join(' ');
 
     const offsetY = viewMode === 'stacked' ? index * (chartHeight + 10) : 0;
 
     return (
       <g key={game.game_pk} transform={`translate(0, ${offsetY})`}>
-        {/* EKG Grid Background */}
+        {/* Background and shading */}
         <defs>
-          <pattern id={`grid-${game.game_pk}`} width="20" height="20" patternUnits="userSpaceOnUse">
-            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#374151" strokeWidth="0.5" opacity="0.3"/>
-          </pattern>
+          <linearGradient id={`winGradient-${game.game_pk}`} x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#22c55e" stopOpacity="0.1" />
+            <stop offset="50%" stopColor="#6b7280" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity="0.1" />
+          </linearGradient>
         </defs>
         <rect
           width={innerWidth}
           height={innerHeight}
-          fill={`url(#grid-${game.game_pk})`}
+          fill={`url(#winGradient-${game.game_pk})`}
           transform={`translate(${margin.left}, ${margin.top})`}
         />
 
-        {/* Zero line */}
+        {/* 50% line - even odds */}
         <line
           x1={margin.left}
-          y1={margin.top + yScale(0)}
+          y1={margin.top + yScale(0.5)}
           x2={margin.left + innerWidth}
-          y2={margin.top + yScale(0)}
+          y2={margin.top + yScale(0.5)}
+          stroke="#ffffff"
+          strokeWidth="2"
+          strokeDasharray="8,4"
+          opacity="0.3"
+        />
+        
+        {/* 25% and 75% guidelines */}
+        <line
+          x1={margin.left}
+          y1={margin.top + yScale(0.75)}
+          x2={margin.left + innerWidth}
+          y2={margin.top + yScale(0.75)}
           stroke="#6b7280"
           strokeWidth="1"
           strokeDasharray="2,2"
+          opacity="0.2"
+        />
+        <line
+          x1={margin.left}
+          y1={margin.top + yScale(0.25)}
+          x2={margin.left + innerWidth}
+          y2={margin.top + yScale(0.25)}
+          stroke="#6b7280"
+          strokeWidth="1"
+          strokeDasharray="2,2"
+          opacity="0.2"
         />
 
-        {/* Heartbeat line */}
+        {/* Win probability curve */}
         <path
           d={pathData}
           fill="none"
-          stroke={game.drama_category.color}
-          strokeWidth="2"
+          stroke="#60a5fa"
+          strokeWidth="3"
+          transform={`translate(${margin.left}, ${margin.top})`}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        
+        {/* Shaded area showing win/loss regions */}
+        <path
+          d={`${pathData} L ${xScale(1)} ${yScale(0.5)} L ${xScale(0)} ${yScale(0.5)} Z`}
+          fill={game.result === 'W' ? '#22c55e' : '#ef4444'}
+          opacity="0.1"
           transform={`translate(${margin.left}, ${margin.top})`}
         />
 
@@ -122,13 +163,15 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
           const isSignificant = Math.abs(point.wpa) > threshold;
           if (!isSignificant) return null;
 
+          // Plot dots at the individual WPA level relative to zero (point.wpa)
+          // This shows the impact direction and magnitude of each individual event
           return (
             <circle
               key={i}
               cx={margin.left + xScale(point.x)}
-              cy={margin.top + yScale(point.y)}
-              r={Math.min(8, 3 + Math.abs(point.wpa) * 8)}
-              fill={point.wpa > 0 ? "#22c55e" : "#ef4444"}
+              cy={margin.top + yScale(point.y)}  // Position on win probability curve
+              r={Math.min(8, 3 + Math.abs(point.wpa) * 8)}  // Size based on individual WPA magnitude
+              fill={point.wpa > 0 ? "#22c55e" : "#ef4444"}  // Green = helped home team, Red = hurt home team
               stroke="#ffffff"
               strokeWidth="2"
               className="cursor-pointer hover:opacity-80 transition-opacity"
@@ -142,11 +185,22 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
         <text
           x={margin.left}
           y={margin.top - 5}
-          fontSize="12"
+          fontSize="13"
           fill="#e5e7eb"
           fontWeight="bold"
         >
-          {game.matchup} ({game.date}) - {game.result} {game.score}
+          {game.matchup} ({game.date})
+        </text>
+        
+        {/* Score with win/loss indicator */}
+        <text
+          x={margin.left + 250}
+          y={margin.top - 5}
+          fontSize="13"
+          fill={game.result === 'W' ? '#22c55e' : '#ef4444'}
+          fontWeight="bold"
+        >
+          {game.result} {game.score}
         </text>
 
         {/* Drama score */}
@@ -171,15 +225,43 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
           strokeWidth="1"
         />
 
-        {/* Y-axis labels */}
+        {/* Y-axis labels - Win Probability */}
         <text
           x={margin.left - 10}
-          y={margin.top + yScale(wpaRange)}
+          y={margin.top + yScale(1)}
           fontSize="10"
           fill="#9ca3af"
           textAnchor="end"
         >
-          +{wpaRange.toFixed(1)}
+          100%
+        </text>
+        <text
+          x={margin.left - 10}
+          y={margin.top + yScale(0.75)}
+          fontSize="10"
+          fill="#9ca3af"
+          textAnchor="end"
+        >
+          75%
+        </text>
+        <text
+          x={margin.left - 10}
+          y={margin.top + yScale(0.5)}
+          fontSize="10"
+          fill="#9ca3af"
+          textAnchor="end"
+          fontWeight="bold"
+        >
+          50%
+        </text>
+        <text
+          x={margin.left - 10}
+          y={margin.top + yScale(0.25)}
+          fontSize="10"
+          fill="#9ca3af"
+          textAnchor="end"
+        >
+          25%
         </text>
         <text
           x={margin.left - 10}
@@ -188,16 +270,7 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
           fill="#9ca3af"
           textAnchor="end"
         >
-          0
-        </text>
-        <text
-          x={margin.left - 10}
-          y={margin.top + yScale(-wpaRange)}
-          fontSize="10"
-          fill="#9ca3af"
-          textAnchor="end"
-        >
-          -{wpaRange.toFixed(1)}
+          0%
         </text>
 
         {/* X-axis */}
@@ -313,10 +386,14 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
               </div>
             )}
             <div className={`font-bold ${hoveredPoint.point.wpa > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              WPA: {hoveredPoint.point.wpa > 0 ? '+' : ''}{hoveredPoint.point.wpa.toFixed(3)}
+              WPA: {hoveredPoint.point.wpa > 0 ? '+' : ''}{(hoveredPoint.point.wpa * 100).toFixed(1)}%
             </div>
-            <div className="text-gray-400 text-xs mt-1">
-              Running total: {hoveredPoint.point.y.toFixed(3)}
+            <div className="text-gray-100 text-sm mt-1 font-semibold">
+              {hoveredPoint.game.home_team || 'BOS'} Win Probability: {
+                hoveredPoint.point.prev_y !== undefined 
+                  ? `${(hoveredPoint.point.prev_y * 100).toFixed(1)}% → ${(hoveredPoint.point.y * 100).toFixed(1)}%`
+                  : `${(hoveredPoint.point.y * 100).toFixed(1)}%`
+              }
             </div>
             {hoveredPoint.point.situation && (
               <div className="text-blue-300 text-xs mt-1">

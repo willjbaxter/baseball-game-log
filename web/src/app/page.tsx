@@ -638,10 +638,12 @@ export default function Home() {
               
               <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700 rounded-lg">
                 <p className="text-gray-300 text-sm md:text-base">
-                  Y-axis shows <strong className="text-white">cumulative WPA (Win Probability Added)</strong> - 
+                  Y-axis shows <strong className="text-white">Win Probability</strong> - 
                   tracks how Red Sox win probability changes throughout each game. 
-                  <span className="text-green-400 font-semibold"> Positive values</span> = Red Sox favored, 
-                  <span className="text-red-400 font-semibold"> negative values</span> = opponent favored.
+                  <span className="font-semibold">Above 50%</span> = Red Sox favored, 
+                  <span className="font-semibold">Below 50%</span> = opponent favored.
+                  <span className="text-green-400 font-semibold">Green dots</span> = plays that helped Red Sox,
+                  <span className="text-red-400 font-semibold">Red dots</span> = plays that hurt Red Sox.
                   Hover over dots for play details.
                 </p>
               </div>

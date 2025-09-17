@@ -59,7 +59,7 @@ def main():
         ''')
         all_games = conn.execute(games_query).fetchall()
         
-        # Then get games with WPA events
+        # Then get games with WPA events - filter out non-events
         wpa_query = text('''
             SELECT 
                 g.mlb_game_pk,
@@ -69,6 +69,8 @@ def main():
                 g.home_score,
                 g.away_score,
                 se.wpa,
+                se.home_win_exp,
+                se.away_win_exp,
                 se.batter_name,
                 se.pitcher_name,
                 se.event_type,
@@ -85,11 +87,22 @@ def main():
                 se.on_2b,
                 se.on_3b,
                 se.balls,
-                se.strikes
+                se.strikes,
+                LAG(se.home_win_exp) OVER (
+                    PARTITION BY g.mlb_game_pk 
+                    ORDER BY se.inning, 
+                        CASE WHEN se.inning_topbot = 'Top' THEN 0 ELSE 1 END,
+                        se.outs_when_up, se.event_datetime
+                ) as prev_home_win_exp
             FROM games g
             LEFT JOIN statcast_events se ON g.mlb_game_pk = se.mlb_game_pk
-            WHERE g.attended = true AND se.wpa IS NOT NULL
-            ORDER BY g.date, g.mlb_game_pk, se.event_datetime
+            WHERE g.attended = true 
+                AND se.wpa IS NOT NULL
+                AND se.event_type NOT IN ('nan', '')
+                AND se.event_type IS NOT NULL
+            ORDER BY g.date, g.mlb_game_pk, se.inning, 
+                    CASE WHEN se.inning_topbot = 'Top' THEN 0 ELSE 1 END,
+                    se.outs_when_up, se.event_datetime
         ''')
         results = conn.execute(wpa_query).fetchall()
         
@@ -121,27 +134,42 @@ def main():
             
             situation = ", ".join(context_parts) if context_parts else "Unknown situation"
             
-            # Score context - clearer format (maintain away-home order consistently)
+            # Score context - show higher score first with team indicator
             score_context = ""
             if row.event_home_score is not None and row.event_away_score is not None:
+                # Format: higher-lower TEAM
+                pre_higher = max(row.event_home_score, row.event_away_score)
+                pre_lower = min(row.event_home_score, row.event_away_score)
+                pre_leader = row.home_team if row.event_home_score > row.event_away_score else row.away_team if row.event_away_score > row.event_home_score else "TIE"
+                
                 if row.post_home_score is not None and row.post_away_score is not None:
+                    post_higher = max(row.post_home_score, row.post_away_score)
+                    post_lower = min(row.post_home_score, row.post_away_score)
+                    post_leader = row.home_team if row.post_home_score > row.post_away_score else row.away_team if row.post_away_score > row.post_home_score else "TIE"
+                    
                     # Only show score change if it actually changed
                     if row.event_home_score != row.post_home_score or row.event_away_score != row.post_away_score:
-                        score_context = f"Score: {row.event_away_score}-{row.event_home_score} → {row.post_away_score}-{row.post_home_score}"
+                        score_context = f"Score: {pre_higher}-{pre_lower} {pre_leader} → {post_higher}-{post_lower} {post_leader}"
                     else:
-                        score_context = f"Score: {row.event_away_score}-{row.event_home_score}"
+                        score_context = f"Score: {pre_higher}-{pre_lower} {pre_leader}"
                 else:
-                    score_context = f"Score: {row.event_away_score}-{row.event_home_score}"
+                    score_context = f"Score: {pre_higher}-{pre_lower} {pre_leader}"
             
             games_data[game_pk]['wpa_events'].append({
                 'wpa': float(row.wpa),
+                'home_win_exp': float(row.home_win_exp) if row.home_win_exp is not None else None,
+                'away_win_exp': float(row.away_win_exp) if row.away_win_exp is not None else None,
+                'prev_home_win_exp': float(row.prev_home_win_exp) if row.prev_home_win_exp is not None else 0.5,
                 'batter_name': row.batter_name,
                 'pitcher_name': row.pitcher_name,
                 'event_type': row.event_type,
                 'description': row.raw_description,
                 'timestamp': str(row.event_datetime) if row.event_datetime else None,
                 'situation': situation,
-                'score_context': score_context
+                'score_context': score_context,
+                'inning': row.inning,
+                'inning_topbot': row.inning_topbot,
+                'outs': row.outs_when_up
             })
         
         # Add games without WPA data as flatline games
@@ -158,43 +186,46 @@ def main():
                     'wpa_events': []  # Empty for flatline games
                 }
         
-        # Calculate cumulative WPA and drama scores
+        # Calculate win probability curves and drama scores
         heartbeat_data = []
         for game_pk, game_data in games_data.items():
             wpa_events = game_data['wpa_events']
             
-            # Calculate cumulative WPA for heartbeat line
-            cumulative_wpa = 0
+            # Build win probability timeline
             heartbeat_points = []
             
             if wpa_events:
-                # Game with WPA data - calculate game progression based on inning/outs
+                # Start at 50% win probability
+                heartbeat_points.append({
+                    'x': 0,  # Game start
+                    'y': 0.5,  # 50% win probability for home team
+                    'wpa': 0,
+                    'batter': 'Game Start',
+                    'pitcher': '',
+                    'event': 'game_start',
+                    'description': 'First Pitch',
+                    'situation': 'Top 1, 0 outs',
+                    'score_context': 'Score: 0-0'
+                })
+                
+                # Game with WPA data - use actual win probability values
                 for i, event in enumerate(wpa_events):
-                    cumulative_wpa += event['wpa']
+                    # Use actual win probability if available, otherwise calculate from cumulative WPA
+                    if event.get('home_win_exp') is not None:
+                        win_prob = event['home_win_exp']
+                    else:
+                        # Fallback: This shouldn't happen with new data, but handle gracefully
+                        continue
                     
-                    # Calculate game progress (0-1 scale) based on inning and outs
-                    # Extract inning info from situation context
-                    game_progress = i / max(len(wpa_events) - 1, 1)  # Fallback to sequence
-                    try:
-                        if 'Top' in event['situation']:
-                            inning = int(event['situation'].split('Top ')[1].split(',')[0])
-                            outs = int(event['situation'].split(', ')[1].split(' ')[0])
-                            # Top of inning: (inning - 1) * 2 + 0 + outs/3
-                            game_progress = ((inning - 1) * 2 + outs / 3) / 18.0  # 9 innings * 2 halves
-                        elif 'Bot' in event['situation']:
-                            inning = int(event['situation'].split('Bot ')[1].split(',')[0])
-                            outs = int(event['situation'].split(', ')[1].split(' ')[0])
-                            # Bottom of inning: (inning - 1) * 2 + 1 + outs/3
-                            game_progress = ((inning - 1) * 2 + 1 + outs / 3) / 18.0
-                        game_progress = min(1.0, game_progress)  # Cap at 100%
-                    except (ValueError, IndexError):
-                        # Fallback to sequence-based if parsing fails
-                        pass
+                    # Use sequential positioning for smooth curves
+                    # Each event gets a unique x position based on its order
+                    game_progress = (i + 1) / max(len(wpa_events), 1)
                     
                     heartbeat_points.append({
-                        'x': game_progress,  # Game time progression (0-1)
-                        'y': cumulative_wpa,
-                        'wpa': event['wpa'],
+                        'x': game_progress,  # Sequential event position (0-1)
+                        'y': win_prob,  # Actual win probability (0-1)
+                        'prev_y': event.get('prev_home_win_exp', 0.5),  # Previous win probability
+                        'wpa': event['wpa'],  # WPA delta for significance detection
                         'batter': event['batter_name'],
                         'pitcher': event['pitcher_name'],
                         'event': event['event_type'],
@@ -203,18 +234,25 @@ def main():
                         'score_context': event['score_context']
                     })
             else:
-                # Flatline game - just start and end points at zero
+                # Flatline game - show at 50% (no data available)
                 heartbeat_points = [
-                    {'x': 0, 'y': 0.0, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_start', 'description': 'Game start'},
-                    {'x': 1, 'y': 0.0, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_end', 'description': 'Game end - no WPA data available'}
+                    {'x': 0, 'y': 0.5, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_start', 'description': 'Game start'},
+                    {'x': 1, 'y': 0.5, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_end', 'description': 'Game end - no WPA data available'}
                 ]
             
             # Calculate drama score
             drama_score = calculate_drama_score(wpa_events)
             drama_category = categorize_drama(drama_score)
             
-            # Game result
-            won = game_data['home_score'] > game_data['away_score']
+            # Game result - check if Red Sox won
+            # For away games, check if away team (BOS) won
+            # For home games, check if home team (BOS) won
+            if game_data['away_team'] == 'BOS':
+                # Red Sox are away
+                won = game_data['away_score'] > game_data['home_score']
+            else:
+                # Red Sox are home
+                won = game_data['home_score'] > game_data['away_score']
             
             # Format score as higher-lower always
             high_score = max(game_data['home_score'], game_data['away_score'])
@@ -224,6 +262,7 @@ def main():
                 'game_pk': game_pk,
                 'date': game_data['date'],
                 'matchup': f"{game_data['away_team']} @ {game_data['home_team']}",
+                'home_team': game_data['home_team'],  # Include home team for win probability display
                 'score': f"{high_score}-{low_score}",
                 'result': 'W' if won else 'L',
                 'drama_score': drama_score,
