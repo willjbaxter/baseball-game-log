@@ -5,7 +5,6 @@ This script re-fetches Statcast data to ensure home_win_exp values are populated
 """
 
 import os
-import sys
 import time
 from sqlalchemy import create_engine, text
 from scraper.statcast_fetcher import fetch_statcast_for_game
@@ -84,7 +83,7 @@ def main():
                         print(f"  ⚠️  Added {len(events)} events but no WP data found")
                         failed_games.append(game_pk)
                 else:
-                    print(f"  ⚠️  No Statcast data available")
+                    print("  ⚠️  No Statcast data available")
                     failed_games.append(game_pk)
                     
             except Exception as e:
