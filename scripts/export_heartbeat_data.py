@@ -87,22 +87,18 @@ def main():
                 se.on_2b,
                 se.on_3b,
                 se.balls,
-                se.strikes,
-                LAG(se.home_win_exp) OVER (
-                    PARTITION BY g.mlb_game_pk 
-                    ORDER BY se.inning, 
-                        CASE WHEN se.inning_topbot = 'Top' THEN 0 ELSE 1 END,
-                        se.outs_when_up, se.event_datetime
-                ) as prev_home_win_exp
+                se.strikes
             FROM games g
             LEFT JOIN statcast_events se ON g.mlb_game_pk = se.mlb_game_pk
             WHERE g.attended = true 
                 AND se.wpa IS NOT NULL
                 AND se.event_type NOT IN ('nan', '')
                 AND se.event_type IS NOT NULL
-            ORDER BY g.date, g.mlb_game_pk, se.inning, 
+            ORDER BY g.date, g.mlb_game_pk, se.inning,
                     CASE WHEN se.inning_topbot = 'Top' THEN 0 ELSE 1 END,
-                    se.outs_when_up, se.event_datetime
+                    se.outs_when_up,
+                    se.event_datetime,
+                    se.id
         ''')
         results = conn.execute(wpa_query).fetchall()
         
@@ -159,7 +155,6 @@ def main():
                 'wpa': float(row.wpa),
                 'home_win_exp': float(row.home_win_exp) if row.home_win_exp is not None else None,
                 'away_win_exp': float(row.away_win_exp) if row.away_win_exp is not None else None,
-                'prev_home_win_exp': float(row.prev_home_win_exp) if row.prev_home_win_exp is not None else 0.5,
                 'batter_name': row.batter_name,
                 'pitcher_name': row.pitcher_name,
                 'event_type': row.event_type,
@@ -193,13 +188,19 @@ def main():
             
             # Build win probability timeline
             heartbeat_points = []
-            
-            if wpa_events:
-                # Start at 50% win probability
+            drama_events = []
+
+            valid_events = [
+                e for e in wpa_events
+                if e.get('home_win_exp') is not None
+            ]
+
+            if valid_events:
+                starting_prob = max(0.0, min(1.0, float(valid_events[0]['home_win_exp'])))
                 heartbeat_points.append({
-                    'x': 0,  # Game start
-                    'y': 0.5,  # 50% win probability for home team
-                    'wpa': 0,
+                    'x': 0,
+                    'y': starting_prob,
+                    'wpa': 0.0,
                     'batter': 'Game Start',
                     'pitcher': '',
                     'event': 'game_start',
@@ -207,25 +208,26 @@ def main():
                     'situation': 'Top 1, 0 outs',
                     'score_context': 'Score: 0-0'
                 })
-                
-                # Game with WPA data - use actual win probability values
-                for i, event in enumerate(wpa_events):
-                    # Use actual win probability if available, otherwise calculate from cumulative WPA
-                    if event.get('home_win_exp') is not None:
-                        win_prob = event['home_win_exp']
-                    else:
-                        # Fallback: This shouldn't happen with new data, but handle gracefully
-                        continue
-                    
-                    # Use sequential positioning for smooth curves
-                    # Each event gets a unique x position based on its order
-                    game_progress = (i + 1) / max(len(wpa_events), 1)
-                    
+
+                total_events = len(valid_events)
+                current_prob = starting_prob
+
+                for idx, event in enumerate(valid_events, start=1):
+                    pre_prob = event.get('home_win_exp')
+                    if pre_prob is None:
+                        pre_prob = current_prob
+                    pre_prob = max(0.0, min(1.0, float(pre_prob)))
+
+                    delta = float(event.get('wpa') or 0.0)
+                    post_prob = max(0.0, min(1.0, pre_prob + delta))
+
+                    drama_events.append({'wpa': delta})
+
                     heartbeat_points.append({
-                        'x': game_progress,  # Sequential event position (0-1)
-                        'y': win_prob,  # Actual win probability (0-1)
-                        'prev_y': event.get('prev_home_win_exp', 0.5),  # Previous win probability
-                        'wpa': event['wpa'],  # WPA delta for significance detection
+                        'x': idx / total_events,
+                        'y': post_prob,
+                        'prev_y': pre_prob,
+                        'wpa': delta,
                         'batter': event['batter_name'],
                         'pitcher': event['pitcher_name'],
                         'event': event['event_type'],
@@ -233,15 +235,22 @@ def main():
                         'situation': event['situation'],
                         'score_context': event['score_context']
                     })
+
+                    current_prob = post_prob
+
+                if not drama_events:
+                    drama_events = [{'wpa': 0.0}]
             else:
                 # Flatline game - show at 50% (no data available)
                 heartbeat_points = [
                     {'x': 0, 'y': 0.5, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_start', 'description': 'Game start'},
                     {'x': 1, 'y': 0.5, 'wpa': 0.0, 'batter': 'No data', 'event': 'game_end', 'description': 'Game end - no WPA data available'}
                 ]
-            
-            # Calculate drama score
-            drama_score = calculate_drama_score(wpa_events)
+                drama_events = [{'wpa': 0.0}]
+                valid_events = []
+
+            # Calculate drama score from actual home-team win probability deltas
+            drama_score = calculate_drama_score(drama_events)
             drama_category = categorize_drama(drama_score)
             
             # Game result - check if Red Sox won
@@ -267,7 +276,7 @@ def main():
                 'result': 'W' if won else 'L',
                 'drama_score': drama_score,
                 'drama_category': drama_category,
-                'total_events': len(wpa_events),
+                'total_events': len(valid_events),
                 'heartbeat_points': heartbeat_points
             })
         

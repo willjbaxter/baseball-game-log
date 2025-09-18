@@ -7,6 +7,7 @@ import sys
 import time
 from typing import List
 
+
 import pandas as pd
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -22,6 +23,41 @@ import httpx
 
 # Cache Savant game-feed per game_pk to avoid refetching
 _gf_cache: dict[int, dict[str, str]] = {}
+
+
+def sort_statcast_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Return DataFrame sorted in true chronological order.
+
+    Statcast exports occasionally return plays grouped by inning but in reverse order
+    inside the half-inning. We stabilise the ordering so downstream consumers (DB
+    writes, WPA export) see the correct progression of events.
+    """
+
+    if df is None or df.empty:
+        return df
+
+    working = df.copy()
+    working["_row_order"] = list(range(len(working)))
+
+    if "inning_topbot" in working.columns:
+        working["_inning_half"] = working["inning_topbot"].map({"Top": 0, "Bot": 1}).fillna(0)
+    else:
+        working["_inning_half"] = 0
+
+    sort_columns: List[str] = []
+    if "inning" in working.columns:
+        sort_columns.append("inning")
+    sort_columns.append("_inning_half")
+    if "at_bat_number" in working.columns:
+        sort_columns.append("at_bat_number")
+    if "pitch_number" in working.columns:
+        sort_columns.append("pitch_number")
+    if "sv_id" in working.columns:
+        sort_columns.append("sv_id")
+    sort_columns.append("_row_order")
+
+    working = working.sort_values(sort_columns, kind="mergesort")
+    return working.drop(columns=["_row_order", "_inning_half"], errors="ignore")
 
 
 def safe_int(val):
@@ -183,6 +219,7 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
     try:
         df: pd.DataFrame | None = sc_game(g.mlb_game_pk)
         if df is not None and not df.empty:
+            df = sort_statcast_dataframe(df)
             print(f"✅ pybaseball: Found {len(df)} Statcast events for game {g.mlb_game_pk}")
             
             events: list[StatcastEvent] = []
@@ -310,6 +347,8 @@ def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:
 
     if df is None or df.empty:
         return []
+
+    df = sort_statcast_dataframe(df)
 
     print(f"DEBUG: pybaseball dataframe for game {g.mlb_game_pk}:")
     print(df.head().to_string())

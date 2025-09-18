@@ -39,7 +39,12 @@ interface HeartbeatChartProps {
 export default function HeartbeatChart({ games }: HeartbeatChartProps) {
   const [selectedGame, setSelectedGame] = useState<HeartbeatGame | null>(null);
   const [viewMode, setViewMode] = useState<'stacked' | 'single'>('stacked');
-  const [hoveredPoint, setHoveredPoint] = useState<{game: HeartbeatGame, point: HeartbeatPoint} | null>(null);
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    game: HeartbeatGame;
+    point: HeartbeatPoint;
+    position: { x: number; y: number };
+  } | null>(null);
+
 
   // Sort games chronologically (recent first)
   const sortedGames = [...games].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -175,7 +180,16 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
               stroke="#ffffff"
               strokeWidth="2"
               className="cursor-pointer hover:opacity-80 transition-opacity"
-              onMouseEnter={() => setHoveredPoint({game, point})}
+              onMouseEnter={(event) => setHoveredPoint({
+                game,
+                point,
+                position: { x: event.clientX, y: event.clientY }
+              })}
+              onMouseMove={(event) => setHoveredPoint({
+                game,
+                point,
+                position: { x: event.clientX, y: event.clientY }
+              })}
               onMouseLeave={() => setHoveredPoint(null)}
             />
           );
@@ -299,6 +313,58 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
     ? (selectedGame ? chartHeight : sortedGames.length * (chartHeight + 10))
     : chartHeight;
 
+  const renderTooltip = () => {
+    if (!hoveredPoint) return null;
+
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+
+    const baseLeft = hoveredPoint.position.x + 16;
+    const maxLeft = viewportWidth ? viewportWidth - 220 : baseLeft;
+    const baseTop = hoveredPoint.position.y + 16;
+    const maxTop = viewportHeight ? viewportHeight - 160 : baseTop;
+    const left = Math.max(16, Math.min(baseLeft, maxLeft));
+    const top = Math.max(16, Math.min(baseTop, maxTop));
+
+    return (
+      <div 
+        className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg pointer-events-none"
+        style={{ left: `${left}px`, top: `${top}px` }}
+      >
+        <div className="text-sm">
+          <div className="font-semibold text-white">
+            {hoveredPoint.point.batter} - {hoveredPoint.point.event}
+          </div>
+          {hoveredPoint.point.pitcher && (
+            <div className="text-gray-300 text-xs">
+              vs {hoveredPoint.point.pitcher}
+            </div>
+          )}
+          <div className={`font-bold ${hoveredPoint.point.wpa > 0 ? 'text-green-400' : 'text-red-400'}`}>
+            WPA: {hoveredPoint.point.wpa > 0 ? '+' : ''}{(hoveredPoint.point.wpa * 100).toFixed(1)}%
+          </div>
+          <div className="text-gray-100 text-sm mt-1 font-semibold">
+            {hoveredPoint.game.home_team || 'BOS'} Win Probability: {
+              hoveredPoint.point.prev_y !== undefined 
+                ? `${(hoveredPoint.point.prev_y * 100).toFixed(1)}% → ${(hoveredPoint.point.y * 100).toFixed(1)}%`
+                : `${(hoveredPoint.point.y * 100).toFixed(1)}%`
+            }
+          </div>
+          {hoveredPoint.point.situation && (
+            <div className="text-blue-300 text-xs mt-1">
+              {hoveredPoint.point.situation}
+            </div>
+          )}
+          {hoveredPoint.point.score_context && (
+            <div className="text-orange-300 text-xs mt-1">
+              {hoveredPoint.point.score_context}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Controls */}
@@ -367,47 +433,7 @@ export default function HeartbeatChart({ games }: HeartbeatChartProps) {
       </div>
 
       {/* Tooltip */}
-      {hoveredPoint && (
-        <div 
-          className="fixed z-50 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg pointer-events-none"
-          style={{
-            left: `${window.innerWidth / 2}px`,
-            top: `${window.innerHeight / 2}px`,
-            transform: 'translate(-50%, -50%)'
-          }}
-        >
-          <div className="text-sm">
-            <div className="font-semibold text-white">
-              {hoveredPoint.point.batter} - {hoveredPoint.point.event}
-            </div>
-            {hoveredPoint.point.pitcher && (
-              <div className="text-gray-300 text-xs">
-                vs {hoveredPoint.point.pitcher}
-              </div>
-            )}
-            <div className={`font-bold ${hoveredPoint.point.wpa > 0 ? 'text-green-400' : 'text-red-400'}`}>
-              WPA: {hoveredPoint.point.wpa > 0 ? '+' : ''}{(hoveredPoint.point.wpa * 100).toFixed(1)}%
-            </div>
-            <div className="text-gray-100 text-sm mt-1 font-semibold">
-              {hoveredPoint.game.home_team || 'BOS'} Win Probability: {
-                hoveredPoint.point.prev_y !== undefined 
-                  ? `${(hoveredPoint.point.prev_y * 100).toFixed(1)}% → ${(hoveredPoint.point.y * 100).toFixed(1)}%`
-                  : `${(hoveredPoint.point.y * 100).toFixed(1)}%`
-              }
-            </div>
-            {hoveredPoint.point.situation && (
-              <div className="text-blue-300 text-xs mt-1">
-                {hoveredPoint.point.situation}
-              </div>
-            )}
-            {hoveredPoint.point.score_context && (
-              <div className="text-orange-300 text-xs mt-1">
-                {hoveredPoint.point.score_context}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      {renderTooltip()}
 
       {/* Legend */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
