@@ -375,12 +375,21 @@ DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYT
 
 ### Future Game Addition Workflow (Current)
 ```bash
-# For new games, use enhanced statcast fetcher with pitcher name resolution
-PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log python3 scraper/statcast_fetcher.py --game XXXXX --force
+# 1. Re-fetch Statcast for the new game so events stay in chronological order
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log \
+  ./venv/bin/python scraper/statcast_fetcher.py --game <GAME_PK> --force
 
-# Export with enhanced context 
-DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYTHONPATH=/Users/willbaxter/Hobbyist/baseball-game-log/venv/lib/python3.13/site-packages python3 scripts/export_heartbeat_data.py
+# 2. Regenerate all exported visual data
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log \
+  ./venv/bin/python scripts/export_heartbeat_data.py
+DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log \
+  ./venv/bin/python scripts/export_wpa_drama.py
+./venv/bin/python scripts/export_json.py web/public/
+
+# 3. Commit JSON + push (Vercel auto-deploys)
 ```
+
+**Shortcut**: trigger the `Add Game to Tracker` workflow in GitHub Actions (supply either a game PK or date/home/away). The action runs the sorted Statcast fetcher, regenerates exports, and commits JSON updates to `main`.
 
 ## Special Notes
 
@@ -390,4 +399,29 @@ DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5433/game_log PYT
 - The web frontend consumes pre-exported JSON files rather than hitting the API directly for performance
 - Production deployment uses Vercel with custom domain `baseball.willbaxter.info` configured in both Cloudflare DNS and Vercel project settings
 - Heartbeat Charts use medical EKG aesthetics with SVG rendering for performance
-- **CRITICAL**: GitHub Actions workflow overwrites local JSON files - always add games locally first, then commit changes
+- GitHub Actions "Add Game to Tracker" workflow automates sorted Statcast fetch + export when you supply the game info
+- **CRITICAL**: Local manual runs still overwrite JSON; keep a clean working tree before running exports
+
+## 🔍 FIXED: Reverse Event Ordering Issue
+
+Early heartbeat versions inverted win probability because Statcast events were stored in reverse order within each half-inning. Current production flow resolves it:
+
+- `scraper/statcast_fetcher.py` now sorts the pybaseball dataframe by inning → half (Top/Bottom) → at-bat number → pitch number before inserting rows. Historical games were re-fetched with `--force`, so database order matches game flow.
+- `scripts/export_heartbeat_data.py` reconstructs post-play win probability by adding Statcast's `delta_home_win_exp` to the pre-play value. Tooltip WPA and line direction stay in sync.
+- The local workflow and the "Add Game to Tracker" GitHub Action invoke these scripts, so future games automatically inherit the fix.
+
+### Verification Query (if regression suspected)
+```sql
+SELECT inning,
+       inning_topbot,
+       event_type,
+       home_score,
+       post_home_score
+FROM statcast_events
+WHERE mlb_game_pk = 634445
+ORDER BY inning,
+         CASE WHEN inning_topbot = 'Top' THEN 0 ELSE 1 END,
+         outs_when_up,
+         id;
+```
+
