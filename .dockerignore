@@ -1,0 +1,44 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Node/Web
+web/
+node_modules/
+
+# Git
+.git/
+.gitignore
+.github/
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Other
+export/
+site/
+scraper/
+scripts/
+tests/
+.DS_Store
+README.md
+CLAUDE.md
+deploy_game_log_key*
+
+# Dev files
+requirements-dev.txt
+pyproject.toml
+.ruff.toml
