@@ -1,0 +1,279 @@
+[
+  {
+    "season": 2025,
+    "games_attended": 12,
+    "wins": 6,
+    "losses": 6,
+    "venues": {
+      "Fenway Park": 12
+    },
+    "longest_hr": {
+      "distance": 443,
+      "exit_velo": 116,
+      "batter": "Aaron Judge",
+      "date": "2025-06-13",
+      "matchup": "NYY @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": 443,
+      "exit_velo": 116,
+      "batter": "Aaron Judge",
+      "date": "2025-06-13",
+      "matchup": "NYY @ BOS"
+    },
+    "barrel_count": 147,
+    "top_wpa_moment": {
+      "wpa": 0.466,
+      "batter": "Abraham Toro",
+      "event_type": "field_error",
+      "description": "hit_into_play",
+      "date": "2025-06-09",
+      "matchup": "TB @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 100,
+      "drama_category": {
+        "level": "cardiac_arrest",
+        "emoji": "\ud83e\udec0\ud83d\udca5",
+        "color": "#ef4444",
+        "label": "Cardiac Arrest"
+      },
+      "matchup": "TB @ BOS",
+      "date": "2025-06-09",
+      "score": "10-8"
+    },
+    "avg_drama_score": 57.9,
+    "total_home_runs": 24
+  },
+  {
+    "season": 2024,
+    "games_attended": 4,
+    "wins": 0,
+    "losses": 4,
+    "venues": {
+      "Fenway Park": 4
+    },
+    "longest_hr": {
+      "distance": 438,
+      "exit_velo": 114,
+      "batter": "Colton Cowser",
+      "date": "2024-04-11",
+      "matchup": "BAL @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": 438,
+      "exit_velo": 114,
+      "batter": "Colton Cowser",
+      "date": "2024-04-11",
+      "matchup": "BAL @ BOS"
+    },
+    "barrel_count": 59,
+    "top_wpa_moment": {
+      "wpa": -0.503,
+      "batter": "Anthony Santander",
+      "event_type": "home_run",
+      "description": "hit_into_play",
+      "date": "2024-04-11",
+      "matchup": "BAL @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 100,
+      "drama_category": {
+        "level": "cardiac_arrest",
+        "emoji": "\ud83e\udec0\ud83d\udca5",
+        "color": "#ef4444",
+        "label": "Cardiac Arrest"
+      },
+      "matchup": "NYY @ BOS",
+      "date": "2024-07-27",
+      "score": "11-8"
+    },
+    "avg_drama_score": 59.3,
+    "total_home_runs": 13
+  },
+  {
+    "season": 2023,
+    "games_attended": 5,
+    "wins": 3,
+    "losses": 2,
+    "venues": {
+      "Fenway Park": 4,
+      "Wrigley Field": 1
+    },
+    "longest_hr": {
+      "distance": 429,
+      "exit_velo": 106,
+      "batter": "Justin Turner",
+      "date": "2023-06-16",
+      "matchup": "NYY @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": 413,
+      "exit_velo": 110,
+      "batter": "Josh Donaldson",
+      "date": "2023-06-16",
+      "matchup": "NYY @ BOS"
+    },
+    "barrel_count": 54,
+    "top_wpa_moment": {
+      "wpa": 0.408,
+      "batter": "Justin Turner",
+      "event_type": "double",
+      "description": "hit_into_play",
+      "date": "2023-07-26",
+      "matchup": "ATL @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 70.9,
+      "drama_category": {
+        "level": "cardiac_arrest",
+        "emoji": "\ud83e\udec0\ud83d\udca5",
+        "color": "#ef4444",
+        "label": "Cardiac Arrest"
+      },
+      "matchup": "LAA @ BOS",
+      "date": "2023-04-14",
+      "score": "5-3"
+    },
+    "avg_drama_score": 39.9,
+    "total_home_runs": 18
+  },
+  {
+    "season": 2021,
+    "games_attended": 8,
+    "wins": 5,
+    "losses": 3,
+    "venues": {
+      "Fenway Park": 8
+    },
+    "longest_hr": {
+      "distance": 435,
+      "exit_velo": 110,
+      "batter": "Kyle Schwarber",
+      "date": "2021-10-05",
+      "matchup": "NYY @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": 402,
+      "exit_velo": 111,
+      "batter": "Rafael Devers",
+      "date": "2021-10-20",
+      "matchup": "HOU @ BOS"
+    },
+    "barrel_count": 95,
+    "top_wpa_moment": {
+      "wpa": -0.362,
+      "batter": "Jason Castro",
+      "event_type": "single",
+      "description": "hit_into_play",
+      "date": "2021-10-19",
+      "matchup": "HOU @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 100,
+      "drama_category": {
+        "level": "cardiac_arrest",
+        "emoji": "\ud83e\udec0\ud83d\udca5",
+        "color": "#ef4444",
+        "label": "Cardiac Arrest"
+      },
+      "matchup": "DET @ BOS",
+      "date": "2021-05-06",
+      "score": "12-9"
+    },
+    "avg_drama_score": 45.3,
+    "total_home_runs": 18
+  },
+  {
+    "season": 2019,
+    "games_attended": 1,
+    "wins": 1,
+    "losses": 0,
+    "venues": {
+      "Fenway Park": 1
+    },
+    "longest_hr": {
+      "distance": 451,
+      "exit_velo": 112,
+      "batter": "Xander Bogaerts",
+      "date": "2019-07-25",
+      "matchup": "NYY @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": 451,
+      "exit_velo": 112,
+      "batter": "Xander Bogaerts",
+      "date": "2019-07-25",
+      "matchup": "NYY @ BOS"
+    },
+    "barrel_count": 22,
+    "top_wpa_moment": {
+      "wpa": 0.18,
+      "batter": "Xander Bogaerts",
+      "event_type": "home_run",
+      "description": "hit_into_play",
+      "date": "2019-07-25",
+      "matchup": "NYY @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 14.8,
+      "drama_category": {
+        "level": "flatline",
+        "emoji": "\ud83d\ude34\ud83d\udcc9",
+        "color": "#6b7280",
+        "label": "Flatline"
+      },
+      "matchup": "NYY @ BOS",
+      "date": "2019-07-25",
+      "score": "19-3"
+    },
+    "avg_drama_score": 14.8,
+    "total_home_runs": 5
+  },
+  {
+    "season": 2013,
+    "games_attended": 1,
+    "wins": 1,
+    "losses": 0,
+    "venues": {
+      "Unknown": 1
+    },
+    "longest_hr": {
+      "distance": null,
+      "exit_velo": null,
+      "batter": "Miguel Cabrera",
+      "date": "2013-10-13",
+      "matchup": "DET @ BOS"
+    },
+    "highest_exit_velo": {
+      "distance": null,
+      "exit_velo": null,
+      "batter": "Miguel Cabrera",
+      "date": "2013-10-13",
+      "matchup": "DET @ BOS"
+    },
+    "barrel_count": 0,
+    "top_wpa_moment": {
+      "wpa": 0.458,
+      "batter": "David Ortiz",
+      "event_type": "home_run",
+      "description": "hit_into_play",
+      "date": "2013-10-13",
+      "matchup": "DET @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 41.2,
+      "drama_category": {
+        "level": "elevated",
+        "emoji": "\ud83d\udcc8\ud83d\udc97",
+        "color": "#f97316",
+        "label": "Elevated Heartbeat"
+      },
+      "matchup": "DET @ BOS",
+      "date": "2013-10-13",
+      "score": "6-5"
+    },
+    "avg_drama_score": 41.2,
+    "total_home_runs": 3
+  }
+]

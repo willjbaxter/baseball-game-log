@@ -6,6 +6,8 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import StatsCard from "@/components/StatsCard";
 import WinLossSparkline from "@/components/WinLossSparkline";
 import HeartbeatChart from "@/components/HeartbeatChart";
+import SeasonStats from "@/components/SeasonStats";
+import SprayChart from "@/components/SprayChart";
 
 const formatDate = (dateString: string): string => {
   const date = new Date(dateString);
@@ -340,7 +342,9 @@ export default function Home() {
     { id: "games", label: "Games" },
     { id: "longest-homers", label: "Longest HRs" },
     { id: "barrel-map", label: "Barrel Map" },
-    { id: "heartbeat", label: "Heartbeat" }
+    { id: "spray-chart", label: "Spray Chart" },
+    { id: "heartbeat", label: "Heartbeat" },
+    { id: "season-stats", label: "Season Stats" },
   ];
 
   if (loading) {
@@ -652,6 +656,20 @@ export default function Home() {
             </div>
           )}
 
+          {activeTab === "spray-chart" && (
+            <div>
+              <h2 className="text-xl md:text-2xl font-semibold mb-4">
+                Spray Chart
+              </h2>
+              <SprayChart />
+            </div>
+          )}
+
+          {activeTab === "season-stats" && (
+            <div>
+              <SeasonStats />
+            </div>
+          )}
 
         </div>
       </div>

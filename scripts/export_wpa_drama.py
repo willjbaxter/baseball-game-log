@@ -3,14 +3,14 @@
 Export top WPA moments (Drama Index) to JSON for the web frontend
 """
 
-import os
 import json
-from sqlalchemy import create_engine, text
+
+from sqlalchemy import text
+
+from config import engine
+
 
 def main():
-    database_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://postgres:postgres@localhost:5433/game_log')
-    engine = create_engine(database_url)
-    
     print("Exporting Drama Index (WPA moments)...")
     
     with engine.connect() as conn:

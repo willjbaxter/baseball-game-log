@@ -2,24 +2,17 @@
 """Fetch Statcast events for attended games and store in DB."""
 
 import math
-import os
-import sys
 import time
 from typing import List
 
-
+import httpx
 import pandas as pd
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from pybaseball import statcast_single_game as sc_game
 
 from api.models import Game, StatcastEvent
-
-# Optional: pybaseball may need env var no_ssl
-# pybaseball single game endpoint is more reliable than daily range
-from pybaseball import statcast_single_game as sc_game
-import httpx
+from config import SessionLocal
+from scraper.players import lookup_player as lookup_player_name
+from scraper.players import normalize_player_name
 
 # Cache Savant game-feed per game_pk to avoid refetching
 _gf_cache: dict[int, dict[str, str]] = {}
@@ -68,39 +61,6 @@ def safe_int(val):
     except (ValueError, TypeError):
         return None
 
-
-def normalize_player_name(name: str) -> str:
-    """Convert player names to consistent format for matching."""
-    if not name or name == 'nan':
-        return ""
-    
-    name = str(name).strip()
-    
-    # If name is in "Last, First" format, convert to "First Last"
-    if ',' in name:
-        parts = name.split(',', 1)
-        if len(parts) == 2:
-            last, first = parts[0].strip(), parts[1].strip()
-            return f"{first} {last}"
-    
-    return name
-
-
-def lookup_player_name(player_id: int) -> str:
-    """Look up player name from MLB API using player ID."""
-    if not player_id or pd.isna(player_id):
-        return ""
-        
-    url = f"https://statsapi.mlb.com/api/v1/people/{int(player_id)}"
-    try:
-        resp = httpx.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        full_name = data['people'][0]['fullName']
-        return full_name
-    except Exception:
-        # If lookup fails, return the ID as string
-        return str(int(player_id))
 
 
 def get_gf_lookup(pk: int) -> dict[str, str]:
@@ -192,12 +152,6 @@ def fetch_playbyplay_json(pk: int):
         return None
 
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/game_log")
-if "+asyncpg" in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("+asyncpg", "+psycopg2")
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
 
 
 def fetch_statcast_for_game(g: Game) -> List[StatcastEvent]:

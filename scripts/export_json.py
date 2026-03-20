@@ -6,68 +6,14 @@ Usage:
 
 The script expects DATABASE_URL env var pointing to the same DB used by the ingester.
 """
-import os
 import sys
 from pathlib import Path
 
-from sqlalchemy import create_engine, text
 import pandas as pd
+from sqlalchemy import text
 
-try:
-    import httpx
-    HTTPX_AVAILABLE = True
-except ImportError:
-    HTTPX_AVAILABLE = False
-    print("Warning: httpx not available. Pitcher names will not be resolved.")
-
-# ---------------------------------------------------------------------------
-DB_URL = os.getenv("DATABASE_URL")
-if not DB_URL:
-    print("DATABASE_URL env var is required", file=sys.stderr)
-    sys.exit(1)
-
-# Convert asyncpg URL to psycopg2 for pandas compatibility
-if "+asyncpg" in DB_URL:
-    DB_URL = DB_URL.replace("+asyncpg", "+psycopg2")
-
-engine = create_engine(DB_URL)
-
-# ---------------------------------------------------------------------------
-# Player name cache for MLB API lookups
-name_cache = {}
-
-def lookup_player(pid: int) -> str:
-    """Look up player name by ID using MLB Stats API."""
-    if not HTTPX_AVAILABLE:
-        return str(pid)
-        
-    if pid in name_cache:
-        return name_cache[pid]
-    
-    url = f"https://statsapi.mlb.com/api/v1/people/{pid}"
-    try:
-        resp = httpx.get(url, timeout=10)
-        resp.raise_for_status()
-        data = resp.json()
-        full = data["people"][0]["fullName"]
-        name_cache[pid] = full
-        return full
-    except Exception as e:
-        print(f"Warning: Could not resolve player ID {pid}: {e}")
-        return str(pid)
-
-def resolve_pitcher_name(pitcher_name: str) -> str:
-    """Resolve pitcher name if it's an ID."""
-    if not HTTPX_AVAILABLE or not pitcher_name:
-        return pitcher_name
-    
-    # Check if pitcher_name is numeric (an ID)
-    try:
-        pid = int(pitcher_name)
-        return lookup_player(pid)
-    except ValueError:
-        # Not an ID, return as-is
-        return pitcher_name
+from config import engine, is_barrel
+from scraper.players import resolve_pitcher_display
 
 def dump(df: pd.DataFrame, out_path: Path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -122,7 +68,7 @@ def export_all(out_dir: Path):
     
     # Resolve pitcher IDs to names
     print("Resolving pitcher names...")
-    longest_hrs['pitcher_name'] = longest_hrs['pitcher_name'].apply(resolve_pitcher_name)
+    longest_hrs['pitcher_name'] = longest_hrs['pitcher_name'].apply(resolve_pitcher_display)
     
     dump(longest_hrs, out_dir / "longest_homers.json")
 
@@ -191,7 +137,7 @@ def export_all(out_dir: Path):
     
     # Resolve pitcher IDs to names
     print("Resolving pitcher names in barrel map data...")
-    barrel_data['pitcher_name'] = barrel_data['pitcher_name'].apply(resolve_pitcher_name)
+    barrel_data['pitcher_name'] = barrel_data['pitcher_name'].apply(resolve_pitcher_display)
     
     # Add outcome categorization
     def categorize_outcome(event_type):
@@ -207,15 +153,11 @@ def export_all(out_dir: Path):
         else:
             return "hit"
     
-    def is_barrel(row):
-        ev = row['launch_speed']
-        la = row['launch_angle']
-        if ev and la:
-            return (8 <= la <= 50) and (ev >= 98)
-        return False
+    def _is_barrel_row(row):
+        return is_barrel(row["launch_angle"], row["launch_speed"])
     
     barrel_data['outcome'] = barrel_data['event_type'].apply(categorize_outcome)
-    barrel_data['is_barrel'] = barrel_data.apply(is_barrel, axis=1)
+    barrel_data['is_barrel'] = barrel_data.apply(_is_barrel_row, axis=1)
     barrel_data['matchup'] = barrel_data['away_team'] + ' @ ' + barrel_data['home_team']
     barrel_data['description'] = barrel_data['event_type'].fillna(barrel_data['raw_description'])
     

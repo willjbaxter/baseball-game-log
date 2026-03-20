@@ -3,9 +3,11 @@
 Export game heartbeat data for EKG-style WPA visualization
 """
 
-import os
 import json
-from sqlalchemy import create_engine, text
+
+from sqlalchemy import text
+
+from config import engine
 
 def calculate_drama_score(wpa_events):
     """Calculate a drama score for a game based on WPA volatility"""
@@ -44,9 +46,6 @@ def categorize_drama(drama_score):
         return {"level": "flatline", "emoji": "😴📉", "color": "#6b7280", "label": "Flatline"}
 
 def main():
-    database_url = os.getenv('DATABASE_URL', 'postgresql+psycopg2://postgres:postgres@localhost:5433/game_log')
-    engine = create_engine(database_url)
-    
     print("Exporting Heartbeat Chart data...")
     
     with engine.connect() as conn:

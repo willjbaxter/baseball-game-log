@@ -3,32 +3,17 @@
 Only updates rows that are missing mlb_game_pk.
 """
 
-import os
-import sys
-from datetime import date
 import logging
+from datetime import date
 
 import httpx
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api.models import Game
+from config import SessionLocal
 from scraper.team_ids import TEAM_ID
 
-# Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg2://postgres:postgres@db:5432/game_log"
-)
-if "+asyncpg" in DATABASE_URL:
-    DATABASE_URL = DATABASE_URL.replace("+asyncpg", "+psycopg2")
-
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 SCHEDULE_URL = "https://statsapi.mlb.com/api/v1/schedule"
 
