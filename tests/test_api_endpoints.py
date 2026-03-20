@@ -1,6 +1,5 @@
 """Tests for all FastAPI endpoints using TestClient against the live database."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app

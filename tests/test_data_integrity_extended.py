@@ -5,8 +5,6 @@ Uses the session-scoped ``db_session`` fixture from conftest.py.
 
 import datetime as _dt
 
-import pytest
-
 from api.models import Game, StatcastEvent
 
 
@@ -78,8 +76,6 @@ def test_past_attended_games_have_scores(db_session):
 
 def test_statcast_events_reference_valid_games(db_session):
     """Every statcast event's mlb_game_pk should match a row in the games table."""
-    from sqlalchemy import func
-
     orphans = (
         db_session.query(StatcastEvent.mlb_game_pk)
         .outerjoin(Game, StatcastEvent.mlb_game_pk == Game.mlb_game_pk)

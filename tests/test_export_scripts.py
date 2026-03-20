@@ -1,7 +1,5 @@
 """Tests for export helper functions (no database needed)."""
 
-import pytest
-
 from scripts.export_heartbeat_data import calculate_drama_score, categorize_drama
 
 

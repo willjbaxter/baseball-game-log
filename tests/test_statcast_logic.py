@@ -3,10 +3,7 @@
 No database connection required.
 """
 
-import math
-
 import pandas as pd
-import pytest
 
 from config import is_barrel
 from scraper.players import normalize_player_name
