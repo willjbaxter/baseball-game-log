@@ -1,5 +1,39 @@
 [
   {
+    "season": 2026,
+    "games_attended": 1,
+    "wins": 0,
+    "losses": 1,
+    "venues": {
+      "Unknown": 1
+    },
+    "longest_hr": null,
+    "highest_exit_velo": null,
+    "barrel_count": 13,
+    "top_wpa_moment": {
+      "wpa": -0.395,
+      "batter": "Ram\u00f3n Laureano",
+      "event_type": "single",
+      "description": "hit_into_play",
+      "date": "2026-04-04",
+      "matchup": "SD @ BOS"
+    },
+    "most_dramatic_game": {
+      "drama_score": 58.6,
+      "drama_category": {
+        "level": "elevated",
+        "emoji": "\ud83d\udcc8\ud83d\udc97",
+        "color": "#f97316",
+        "label": "Elevated Heartbeat"
+      },
+      "matchup": "SD @ BOS",
+      "date": "2026-04-04",
+      "score": "3-2"
+    },
+    "avg_drama_score": 58.6,
+    "total_home_runs": 0
+  },
+  {
     "season": 2025,
     "games_attended": 12,
     "wins": 6,
