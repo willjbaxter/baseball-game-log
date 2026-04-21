@@ -600,6 +600,36 @@
     "away_score": 9
   },
   {
+    "wpa": 0.189,
+    "batter_name": "Ceddanne Rafaela",
+    "pitcher_name": "Tyler Holton",
+    "event_type": "single",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 824776,
+    "clip_uuid": null,
+    "video_url": null,
+    "date": "2026-04-20",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "home_score": 8,
+    "away_score": 6
+  },
+  {
+    "wpa": -0.188,
+    "batter_name": "Jahmai Jones",
+    "pitcher_name": "Jovani Mor\u00e1n",
+    "event_type": "single",
+    "raw_description": "hit_into_play",
+    "mlb_game_pk": 824776,
+    "clip_uuid": null,
+    "video_url": null,
+    "date": "2026-04-20",
+    "home_team": "BOS",
+    "away_team": "DET",
+    "home_score": 8,
+    "away_score": 6
+  },
+  {
     "wpa": -0.188,
     "batter_name": "Hunter Renfroe",
     "pitcher_name": "Tanner Houck",
@@ -718,35 +748,5 @@
     "away_team": "DET",
     "home_score": 6,
     "away_score": 5
-  },
-  {
-    "wpa": -0.172,
-    "batter_name": "Carlos Correa",
-    "pitcher_name": "Nathan Eovaldi",
-    "event_type": "double",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 660923,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2021-10-19",
-    "home_team": "BOS",
-    "away_team": "HOU",
-    "home_score": 2,
-    "away_score": 9
-  },
-  {
-    "wpa": -0.17,
-    "batter_name": "Jake Mangum",
-    "pitcher_name": "Aroldis Chapman",
-    "event_type": "single",
-    "raw_description": "hit_into_play",
-    "mlb_game_pk": 777584,
-    "clip_uuid": null,
-    "video_url": null,
-    "date": "2025-06-09",
-    "home_team": "BOS",
-    "away_team": "TB",
-    "home_score": 8,
-    "away_score": 10
   }
 ]
