@@ -1,4 +1,8 @@
 [
+  {"date": "2026-07-18", "home_team": "BOS", "away_team": "TB", "home_score": 7, "away_score": 6, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 824738},
+  {"date": "2026-05-23", "home_team": "BOS", "away_team": "MIN", "home_score": 2, "away_score": 4, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 824760},
+  {"date": "2026-04-22", "home_team": "BOS", "away_team": "NYY", "home_score": 1, "away_score": 4, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 824774},
+  {"date": "2026-04-20", "home_team": "BOS", "away_team": "DET", "home_score": 8, "away_score": 6, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 824776},
   {"date": "2025-06-13", "home_team": "BOS", "away_team": "NYY", "source": "scorecard", "home_score": 2, "away_score": 1, "venue": "Fenway Park", "mlb_game_pk": 803241},
   {"date": "2021-10-19", "home_team": "BOS", "away_team": "HOU", "source": "scorecard", "home_score": 12, "away_score": 3, "venue": "Fenway Park", "mlb_game_pk": 660913},
   {"date": "2021-10-16", "home_team": "BOS", "away_team": "HOU", "source": "scorecard", "home_score": 9, "away_score": 5, "venue": "Fenway Park", "mlb_game_pk": 660915},
@@ -28,4 +32,4 @@
   {"date": "2021-04-19", "home_team": "BOS", "away_team": "CWS", "home_score": 11, "away_score": 4, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 634501},
   {"date": "2021-04-04", "home_team": "BOS", "away_team": "BAL", "home_score": 3, "away_score": 11, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 634621},
   {"date": "2019-07-25", "home_team": "BOS", "away_team": "NYY", "home_score": 19, "away_score": 3, "venue": "Fenway Park", "source": "ballpark_app", "mlb_game_pk": 567621}
-] 
+]
